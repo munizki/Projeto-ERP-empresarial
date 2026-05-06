@@ -1,0 +1,16 @@
+.env
+.git
+.pytest_cache
+.vscode
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+venv
+.venv
+logs
+backups
+*.zip
+*.dump
+*.sqlite
+*.db
