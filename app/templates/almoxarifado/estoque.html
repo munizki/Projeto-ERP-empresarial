@@ -1,0 +1,159 @@
+{% extends "shared/base.html" %}
+{% block title %}Estoque{% endblock %}
+{% block page_title %}&#128295; Estoque de Pecas{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('sucesso') %}
+<div class="alert alert-success">Entrada registrada com sucesso.</div>
+{% endif %}
+{% if request.query_params.get('estorno') %}
+<div class="alert alert-success">Entrada manual estornada com sucesso.</div>
+{% endif %}
+
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Estoque de pecas</h2>
+  </div>
+  <div class="page-intro-badge">{{ total_caixas_estoque }} caixa(s) livres</div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon">&#128230;</div>
+    <div>
+      <div class="stat-value">{{ total_caixas_estoque }}</div>
+      <div class="stat-label">Caixas em estoque</div>
+    </div>
+  </div>
+  <div class="stat-card teal">
+    <div class="stat-icon">&#128167;</div>
+    <div>
+      <div class="stat-value">{{ total_hidrometros_disponiveis }}</div>
+      <div class="stat-label">Hidrometros disponiveis</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">&#9881;</div>
+    <div>
+      <div class="stat-value">{{ resumo_manutencao.prioridade_reutilizacao }}</div>
+      <div class="stat-label">Retornados para priorizar</div>
+    </div>
+  </div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/almoxarifado/solicitacoes" class="btn btn-warning btn-sm">Solicitacoes</a>
+  <a href="/almoxarifado/estoque-inteligente" class="btn btn-primary btn-sm">Estoque inteligente</a>
+  <a href="/almoxarifado/estoque/exportar.xlsx" class="btn btn-success btn-sm">XLSX</a>
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+  <a href="/almoxarifado/pecas/entrada" class="btn btn-primary btn-sm">Registrar entrada</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Pecas disponiveis</div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Peca</th>
+          <th>Unidade</th>
+          <th>Atual</th>
+          <th>Maximo</th>
+          <th>Percentual</th>
+          <th>Minimo</th>
+          <th>Situacao</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in estoques %}
+        {% if e.tipo_peca and e.tipo_peca.ativo %}
+        {% set pct = e.percentual_atual|int %}
+        {% set bundle = estoque_action_bundle(e, usuario, can_use_advanced_mode(request, usuario)) %}
+        <tr>
+          <td>
+            <strong>{{ e.tipo_peca.nome }}</strong>
+            {% if e.tipo_peca.descricao %}<div class="text-muted">{{ e.tipo_peca.descricao }}</div>{% endif %}
+          </td>
+          <td>{{ e.tipo_peca.unidade_medida }}</td>
+          <td><strong>{{ e.quantidade_atual }}</strong></td>
+          <td>{{ e.quantidade_maxima }}</td>
+          <td>
+            <div class="progress-inline">
+              <div class="progress-track">
+                <div class="progress-fill {{ 'danger' if e.abaixo_minimo else 'success' }}" style="width: {{ [pct, 100]|min }}%;"></div>
+              </div>
+              <span>{{ pct }}%</span>
+            </div>
+          </td>
+          <td>{{ e.tipo_peca.estoque_minimo_percentual|int }}%</td>
+          <td>
+            {% if e.abaixo_minimo %}
+            <span class="badge badge-danger">Baixo</span>
+            {% else %}
+            <span class="badge badge-success">OK</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="table-actions">
+              {% if bundle.primary %}
+                {% set action = bundle.primary[0] %}
+                <a href="{{ action.href }}" class="btn btn-sm btn-{{ action.tone }}">{{ action.label }}</a>
+              {% elif bundle.secondary %}
+                {% set action = bundle.secondary[0] %}
+                <a href="{{ action.href }}" class="btn btn-sm btn-{{ action.tone }}">{{ action.label }}</a>
+              {% endif %}
+            </div>
+            <div class="action-helper">{{ bundle.summary }}</div>
+          </td>
+        </tr>
+        {% endif %}
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted" style="padding: 28px;">Nenhuma peca cadastrada no estoque.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if can_use_advanced_mode(request, usuario) and entradas_manuais_recentes %}
+<div class="card mt-4 no-print">
+  <div class="card-header">
+    <div class="card-title">Ultimas entradas manuais</div>
+    <span class="badge badge-warning">Admin</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Peca</th>
+          <th>Quantidade</th>
+          <th>Responsavel</th>
+          <th>Data</th>
+          <th>Acao</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mov in entradas_manuais_recentes %}
+        <tr>
+          <td>#{{ mov.id }}</td>
+          <td>{{ mov.tipo_peca.nome if mov.tipo_peca else "-" }}</td>
+          <td>{{ mov.quantidade }}</td>
+          <td>{{ mov.registrado_por.nome if mov.registrado_por else "-" }}</td>
+          <td>{{ mov.criado_em|datetime_br_seconds }}</td>
+          <td>
+            <a href="/admin/pecas/movimentacoes/{{ mov.id }}/estornar-entrada" class="btn btn-danger btn-sm">Estornar</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

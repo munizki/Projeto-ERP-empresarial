@@ -1,0 +1,58 @@
+{% extends "shared/base.html" %}
+{% block title %}Usuarios{% endblock %}
+{% block page_title %}👥 Usuarios do Sistema{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin/usuarios/novo" class="btn btn-primary btn-sm">➕ Novo Usuario</a>
+{% endblock %}
+{% block content %}
+{% if request.query_params.get("sucesso") %}<div class="alert alert-success">✅ Operacao realizada com sucesso.</div>{% endif %}
+{% if request.query_params.get("limpeza") == "usuario_excluido" %}<div class="alert alert-success">✅ Usuario excluido com auditoria registrada.</div>{% endif %}
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nome</th>
+          <th>E-mail</th>
+          <th>Matricula</th>
+          <th>Perfil</th>
+          <th>Status</th>
+          <th>Ultimo acesso</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr>
+          <td class="text-muted">{{ u.id }}</td>
+          <td><strong>{{ u.nome }}</strong></td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.matricula or '-' }}</td>
+          <td>
+            {% if u.role.value == "admin" %}<span class="badge badge-danger">Admin</span>
+            {% elif u.role.value == "almoxarifado" %}<span class="badge badge-warning">Almoxarifado</span>
+            {% elif u.role.value == "instalador" %}<span class="badge badge-success">Instalador</span>
+            {% else %}<span class="badge badge-info">Manipulador</span>{% endif %}
+          </td>
+          <td>{% if u.ativo %}<span class="badge badge-success">Ativo</span>{% else %}<span class="badge badge-secondary">Inativo</span>{% endif %}</td>
+          <td class="text-muted">{{ u.ultimo_acesso|datetime_br if u.ultimo_acesso else "Nunca" }}</td>
+          <td>
+            <div class="table-actions">
+              <a href="/admin/usuarios/{{ u.id }}/editar" class="btn btn-sm btn-outline">✏️ Editar</a>
+              {% if u.id != usuario.id %}
+              <a href="/admin/limpeza/usuarios/{{ u.id }}?next_path=/admin/usuarios" class="btn btn-sm btn-danger">🗑 Excluir</a>
+              {% else %}
+              <button type="button" class="btn btn-sm btn-secondary" data-popup-message="O usuario logado nao pode ser excluido." data-popup-type="warning">🔒 Atual</button>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-center text-muted" style="padding:24px">Nenhum usuario cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

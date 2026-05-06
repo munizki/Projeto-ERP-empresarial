@@ -1,0 +1,107 @@
+{% extends "shared/base.html" %}
+{% block title %}Relatorio Completo de Caixas{% endblock %}
+{% block page_title %}Caixas completo{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/relatorios/caixas-completo/exportar.xlsx?{{ request.url.query }}" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+{% endblock %}
+
+{% block content %}
+<section class="executive-hero executive-hero-relatorios mb-4">
+  <div class="executive-hero-main">
+    <span class="executive-kicker">&#128230; GMF</span>
+    <h2>Relatorio completo de caixas</h2>
+    <div class="executive-chip-row">
+      <span class="executive-chip">Estoque</span>
+      <span class="executive-chip">Instaladas</span>
+      <span class="executive-chip">Transferidas</span>
+    </div>
+  </div>
+  <div class="executive-hero-metrics">
+    <div class="executive-metric-card"><span>Total</span><strong>{{ kpis.total }}</strong></div>
+    <div class="executive-metric-card"><span>Instaladas</span><strong>{{ kpis.instaladas }}</strong></div>
+    <div class="executive-metric-card"><span>Transferidas</span><strong>{{ kpis.transferidas }}</strong></div>
+  </div>
+</section>
+
+<form method="get" class="card mb-4">
+  <div class="card-body">
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status">
+          <option value="">Todos</option>
+          {% for status in CaixaStatus %}
+          <option value="{{ status.value }}" {% if filtros.status == status.value or filtros.status == status.name %}selected{% endif %}>{{ humanize_status(status) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Instalador</label>
+        <select name="instalador_id">
+          <option value="0">Todos</option>
+          {% for instalador in instaladores %}
+          <option value="{{ instalador.id }}" {% if filtros.instalador_id == instalador.id %}selected{% endif %}>{{ instalador.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Empresa destino</label>
+        <input name="empresa_destino" value="{{ filtros.empresa_destino }}" placeholder="Opcional">
+      </div>
+      <div class="form-group">
+        <label>Caixa ou hidrometro</label>
+        <input name="termo" value="{{ filtros.termo }}" placeholder="Buscar">
+      </div>
+      <div class="form-group">
+        <label>Inicio</label>
+        <input type="date" name="data_inicio" value="{{ filtros.data_inicio }}">
+      </div>
+      <div class="form-group">
+        <label>Fim</label>
+        <input type="date" name="data_fim" value="{{ filtros.data_fim }}">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      <a href="/relatorios/caixas-completo" class="btn btn-secondary">Limpar</a>
+    </div>
+  </div>
+</form>
+
+<div class="audit-grid">
+  {% for caixa in caixas %}
+  {% set hidros = get_caixa_hidrometros(caixa) %}
+  {% set transferencia = transferencias.get(caixa.id) %}
+  <article class="audit-card audit-card-info">
+    <div class="audit-card-head">
+      <div class="audit-chip-row">
+        <span class="audit-action-badge audit-action-info">{{ humanize_status(caixa.status) }}</span>
+        <span class="audit-entity-pill">{{ caixa.numero_interno }}</span>
+      </div>
+      <div class="audit-time">{{ caixa.criado_em|datetime_br }}</div>
+    </div>
+    <div class="audit-card-body">
+      <div class="audit-primary-line">
+        <strong>{{ caixa.serial_number }}</strong>
+        <span>{{ "Ativa" if caixa.ativo else "Inativa" }}</span>
+      </div>
+      <div class="chip-grid mt-3">
+        <span class="chip">&#128167; {{ hidros|length }}/{{ quantidade_esperada_caixa(caixa) }}</span>
+        <span class="chip">&#9989; {{ hidros|selectattr("status.value", "eq", "instalado")|list|length }} instalados</span>
+        <span class="chip">&#128119; {{ caixa.instalador.nome if caixa.instalador else "-" }}</span>
+        {% if transferencia %}
+        <span class="chip">&#127970; {{ transferencia.empresa_destino }}</span>
+        <span class="chip">&#128197; {{ transferencia.data_transferencia|datetime_br }}</span>
+        {% endif %}
+      </div>
+      <div class="form-actions mt-3 no-print">
+        <a href="/almoxarifado/caixas/{{ caixa.id }}" class="btn btn-secondary btn-sm">Abrir</a>
+      </div>
+    </div>
+  </article>
+  {% else %}
+  <div class="empty-state"><p>Nenhuma caixa encontrada.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

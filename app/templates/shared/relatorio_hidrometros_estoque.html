@@ -1,0 +1,79 @@
+{% extends "shared/base.html" %}
+{% block title %}Hidrometros em Estoque{% endblock %}
+{% block page_title %}Hidrometros em estoque{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/relatorios/hidrometros-estoque/exportar.xlsx?{{ request.url.query }}" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+{% endblock %}
+
+{% block content %}
+<section class="executive-hero executive-hero-relatorios mb-4">
+  <div class="executive-hero-main">
+    <span class="executive-kicker">GMF</span>
+    <h2>Relatorio de hidrometros disponiveis no estoque</h2>
+    <div class="executive-chip-row">
+      <span class="executive-chip">Series individuais</span>
+      <span class="executive-chip">Vinculo com caixa</span>
+      <span class="executive-chip">Exportacao XLSX</span>
+    </div>
+  </div>
+  <div class="executive-hero-metrics">
+    <div class="executive-metric-card"><span>Total</span><strong>{{ kpis.total }}</strong></div>
+    <div class="executive-metric-card"><span>Em caixas</span><strong>{{ kpis.em_caixa }}</strong></div>
+    <div class="executive-metric-card"><span>Soltos</span><strong>{{ kpis.soltos }}</strong></div>
+    <div class="executive-metric-card"><span>Prioridade</span><strong>{{ kpis.prioridade }}</strong></div>
+  </div>
+</section>
+
+<form method="get" class="card mb-4">
+  <div class="card-body">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Buscar por caixa ou hidrometro</label>
+        <input name="termo" value="{{ filtros.termo }}" placeholder="Serie do hidrometro, numero ou serial da caixa" data-scanner-field="true" autocomplete="off" autocapitalize="characters" spellcheck="false" autofocus>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      <a href="/relatorios/hidrometros-estoque" class="btn btn-secondary">Limpar</a>
+    </div>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-header"><div class="card-title">Series disponiveis</div></div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Hidrometro</th>
+          <th>Caixa</th>
+          <th>Serial da caixa</th>
+          <th>Status</th>
+          <th>Origem</th>
+          <th>Cadastro</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in hidrometros %}
+        <tr>
+          <td class="mono">{{ h.numero_serie }}</td>
+          <td>{{ h.caixa.numero_interno if h.caixa else "SOLTO" }}</td>
+          <td class="mono">{{ h.caixa.serial_number if h.caixa else "-" }}</td>
+          <td>
+            <span class="badge badge-success">{{ humanize_status(h.status) }}</span>
+            {% if h.prioridade_reutilizacao %}
+            <span class="badge badge-warning">Priorizar reutilizacao</span>
+            {% endif %}
+          </td>
+          <td>{{ h.origem_prioridade or ("Caixa em estoque" if h.caixa else "Estoque solto") }}</td>
+          <td>{{ h.criado_em|datetime_br }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted" style="padding:24px;">Nenhum hidrometro disponivel em estoque encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

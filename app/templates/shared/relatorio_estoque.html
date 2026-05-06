@@ -1,0 +1,103 @@
+{% extends "shared/base.html" %}
+{% block title %}Relatorio - Estoque{% endblock %}
+{% block page_title %}&#128230; Resumo de Estoque{% endblock %}
+
+{% block content %}
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Resumo executivo de estoque</h2>
+    <p>Consolidado de caixas e pecas em um unico painel, com exportacao local e leitura pronta para impressao.</p>
+  </div>
+  <div class="page-intro-badge">{{ caixas|length }} caixa(s)</div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/relatorios" class="btn btn-outline btn-sm">Relatorios</a>
+  <a href="/almoxarifado/caixas/exportar.xlsx" class="btn btn-success btn-sm" download>Baixar caixas XLSX</a>
+  <a href="/almoxarifado/estoque/exportar.xlsx" class="btn btn-success btn-sm" download>Baixar pecas XLSX</a>
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card section-card section-almox">
+    <span>Caixas livres</span>
+    <strong>{{ caixas_por_status.em_estoque }}</strong>
+    <small>Disponiveis no estoque</small>
+  </div>
+  <div class="summary-card section-card section-warning">
+    <span>Caixas entregues</span>
+    <strong>{{ caixas_por_status.entregues }}</strong>
+    <small>Em campo com instalador</small>
+  </div>
+  <div class="summary-card section-card section-info">
+    <span>Hidrometros livres</span>
+    <strong>{{ caixas_por_status.em_estoque * 6 }}</strong>
+    <small>Estimativa por caixa ativa</small>
+  </div>
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Caixas ativas</div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Numero interno</th>
+            <th>Serial</th>
+            <th>Status</th>
+            <th>Instalador</th>
+            <th>Hidrometros</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in caixas %}
+          {% set hidrometros_caixa = get_caixa_hidrometros(c) %}
+          <tr>
+            <td><strong>{{ c.numero_interno }}</strong></td>
+            <td class="mono">{{ c.serial_number }}</td>
+            <td>{{ humanize_status(c.status) }}</td>
+            <td>{{ c.instalador.nome if c.instalador else '-' }}</td>
+            <td>{{ hidrometros_caixa|length }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted" style="padding:24px">Nenhuma caixa ativa.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Pecas em estoque</div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Peca</th>
+            <th>Atual</th>
+            <th>Maximo</th>
+            <th>% atual</th>
+            <th>Situacao</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in estoques %}
+          {% if e.tipo_peca and e.tipo_peca.ativo %}
+          <tr>
+            <td><strong>{{ e.tipo_peca.nome }}</strong></td>
+            <td>{{ e.quantidade_atual }} {{ e.tipo_peca.unidade_medida }}</td>
+            <td>{{ e.quantidade_maxima }}</td>
+            <td>{{ e.percentual_atual|int }}%</td>
+            <td>{% if e.abaixo_minimo %}<span class="badge badge-danger">Baixo</span>{% else %}<span class="badge badge-success">OK</span>{% endif %}</td>
+          </tr>
+          {% endif %}
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted" style="padding:24px">Nenhuma peca.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

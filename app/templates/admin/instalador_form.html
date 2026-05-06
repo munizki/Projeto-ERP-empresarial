@@ -1,0 +1,54 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ 'Editar' if editando else 'Novo' }} Instalador{% endblock %}
+{% block page_title %}{{ 'Editar' if editando else 'Novo' }} Instalador{% endblock %}
+{% block content %}
+<div class="page-intro mb-4">
+  <div>
+    <h2>Cadastros com rastreabilidade real</h2>
+    <p>Mantenha matricula e status corretos para garantir entregas e baixas sem retrabalho.</p>
+  </div>
+  <div class="page-intro-badge">Instaladores</div>
+</div>
+
+<div style="max-width:560px">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Dados do instalador</div></div>
+    <div class="card-body">
+      {% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+      <form method="post" action="{{ '/admin/instaladores/' + editando.id|string + '/editar' if editando else '/admin/instaladores/novo' }}" data-dirty-check="true">
+        <div class="form-group">
+          <label>Nome completo *</label>
+          <input type="text" name="nome" value="{{ editando.nome if editando else '' }}" required>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Matricula *</label>
+            <input type="text" name="matricula" value="{{ editando.matricula if editando else '' }}" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>CPF (opcional)</label>
+            <input type="text" name="cpf" value="{{ editando.cpf if editando and editando.cpf else '' }}" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" autocomplete="off">
+          </div>
+        </div>
+        {% if editando %}
+        <div class="form-grid">
+          <div></div>
+          <div class="form-group">
+            <label>Status</label>
+            <select name="ativo">
+              <option value="1" {{ 'selected' if editando.ativo }}>Ativo</option>
+              <option value="0" {{ 'selected' if not editando.ativo }}>Inativo</option>
+            </select>
+          </div>
+        </div>
+        {% endif %}
+        <hr class="divider">
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">{{ 'Salvar cadastro' if editando else 'Cadastrar instalador' }}</button>
+          <a href="/admin/instaladores" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas no cadastro do instalador. Deseja voltar para a lista?">Voltar para instaladores</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

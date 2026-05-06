@@ -1,0 +1,151 @@
+{% extends "shared/base.html" %}
+{% block title %}Relatorio - Estoque Inteligente{% endblock %}
+{% block page_title %}Estoque Inteligente{% endblock %}
+
+{% macro status_badge(status) -%}
+  {% if status == 'CRITICO' %}
+    <span class="badge badge-danger">CRITICO</span>
+  {% elif status == 'ATENCAO' %}
+    <span class="badge badge-warning">ATENCAO</span>
+  {% elif status == 'OK' %}
+    <span class="badge badge-success">OK</span>
+  {% else %}
+    <span class="badge badge-secondary">SEM HISTORICO</span>
+  {% endif %}
+{%- endmacro %}
+
+{% block content %}
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Relatorio empresarial de estoque</h2>
+    <p>Consolida estoque atual, minimo calculado, consumo medio, dias restantes e risco por quantidade de hidrometros disponiveis.</p>
+  </div>
+  <div class="page-intro-badge">{{ dashboard.fator_pressao }}</div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/relatorios" class="btn btn-outline btn-sm">Relatorios</a>
+  <a href="/almoxarifado/estoque-inteligente" class="btn btn-outline btn-sm">Painel operacional</a>
+  <a href="/relatorios/estoque-inteligente/exportar.xlsx?status={{ filtros.status }}&q={{ filtros.q }}&dias={{ filtros.dias }}" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+</div>
+
+<div class="executive-band mb-4">
+  <div class="executive-band-item"><span>Pecas</span><strong>{{ dashboard.kpis.total_pecas }}</strong></div>
+  <div class="executive-band-item"><span>Criticos</span><strong>{{ dashboard.kpis.criticos }}</strong></div>
+  <div class="executive-band-item"><span>Atencao</span><strong>{{ dashboard.kpis.atencao }}</strong></div>
+  <div class="executive-band-item"><span>Hidrometros</span><strong>{{ dashboard.kpis.hidrometros_disponiveis }}</strong></div>
+  <div class="executive-band-item"><span>Consumo mes</span><strong>{{ dashboard.kpis.consumo_total_mes }}</strong></div>
+</div>
+
+<form method="get" action="/relatorios/estoque-inteligente" class="inline-form mb-3 no-print">
+  <div class="form-group">
+    <label>Status</label>
+    <select name="status">
+      <option value="todos" {{ 'selected' if filtros.status == 'todos' else '' }}>Todos</option>
+      <option value="critico" {{ 'selected' if filtros.status == 'critico' else '' }}>Criticos</option>
+      <option value="atencao" {{ 'selected' if filtros.status == 'atencao' else '' }}>Atencao</option>
+      <option value="ok" {{ 'selected' if filtros.status == 'ok' else '' }}>OK</option>
+      <option value="sem_historico" {{ 'selected' if filtros.status == 'sem_historico' else '' }}>Sem historico</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Peca</label>
+    <input type="search" name="q" value="{{ filtros.q }}" placeholder="Buscar por nome">
+  </div>
+  <div class="form-group">
+    <label>Periodo</label>
+    <input type="number" name="dias" value="{{ filtros.dias }}" min="7" max="90">
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+</form>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <div>
+      <div class="card-title">Risco operacional por peca</div>
+      <div class="text-muted">Ordenado pelos itens mais criticos primeiro.</div>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Peca</th>
+          <th>Atual</th>
+          <th>Maximo</th>
+          <th>Min %</th>
+          <th>Min qtd</th>
+          <th>Consumo medio</th>
+          <th>Dias restantes</th>
+          <th>Status</th>
+          <th>Ultima mov.</th>
+          <th>Previsao</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in itens %}
+        <tr>
+          <td><strong>{{ item.nome }}</strong>{% if item.descricao %}<div class="text-muted">{{ item.descricao }}</div>{% endif %}</td>
+          <td>{{ item.estoque_atual }} {{ item.unidade }}</td>
+          <td>{{ item.quantidade_maxima }}</td>
+          <td>{{ "%.1f"|format(item.minimo_percentual) }}%</td>
+          <td>{{ "%.1f"|format(item.minimo_qtd) }}</td>
+          <td>{% if item.consumo_medio_diario is not none %}{{ "%.2f"|format(item.consumo_medio_diario) }}/dia{% else %}<span class="text-muted">Sem historico</span>{% endif %}</td>
+          <td>{% if item.dias_restantes is not none %}{{ "%.1f"|format(item.dias_restantes) }}{% else %}-{% endif %}</td>
+          <td>{{ status_badge(item.status) }}</td>
+          <td>{{ item.ultima_movimentacao|datetime_br if item.ultima_movimentacao else '-' }}</td>
+          <td>{{ item.previsao }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" class="text-center text-muted" style="padding:28px">Nenhuma peca encontrada para o filtro.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Top 10 pecas consumidas no mes</div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Peca</th><th>Quantidade</th><th>Participacao</th></tr></thead>
+        <tbody>
+          {% for item in dashboard.ranking_pecas %}
+          <tr><td><strong>{{ item.nome }}</strong></td><td>{{ item.quantidade }}</td><td>{{ "%.1f"|format(item.percentual) }}%</td></tr>
+          {% else %}
+          <tr><td colspan="3" class="text-center text-muted" style="padding:24px">Sem saidas de pecas no mes.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Analise por instalador</div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Instalador</th><th>Hidrometros</th><th>Pecas</th><th>Media</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for item in dashboard.analise_instaladores %}
+          <tr>
+            <td><strong>{{ item.instalador }}</strong></td>
+            <td>{{ item.hidrometros_instalados }}</td>
+            <td>{{ item.pecas_recebidas }}</td>
+            <td>{{ "%.2f"|format(item.media_pecas_por_hidrometro) }}</td>
+            <td>
+              {% if item.status == 'SUSPEITO' %}<span class="badge badge-danger">SUSPEITO</span>
+              {% elif item.status == 'ATENCAO' %}<span class="badge badge-warning">ATENCAO</span>
+              {% else %}<span class="badge badge-success">NORMAL</span>{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted" style="padding:24px">Sem historico suficiente.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

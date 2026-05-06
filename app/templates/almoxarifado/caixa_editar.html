@@ -1,0 +1,64 @@
+{% extends "shared/base.html" %}
+{% block title %}Editar Caixa{% endblock %}
+{% block page_title %}&#9998; Editar Caixa{% endblock %}
+
+{% block content %}
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>{{ caixa.numero_interno }}</h2>
+    <p>Edite o numero interno e o serial da caixa antes que ela entre em movimentacao. Os hidrometros continuam os mesmos.</p>
+  </div>
+  <div class="page-intro-badge">{{ get_caixa_hidrometros(caixa)|length }} hidr.</div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/almoxarifado/caixas/{{ caixa.id }}" class="btn btn-secondary btn-sm">Detalhe</a>
+  <a href="/almoxarifado/caixas" class="btn btn-outline btn-sm">Lista de caixas</a>
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Identificacao da caixa</div>
+    </div>
+    <div class="card-body">
+      {% if erro %}<div class="alert alert-danger mb-3">{{ erro }}</div>{% endif %}
+
+      <form method="post" action="/almoxarifado/caixas/{{ caixa.id }}/editar" data-dirty-check="true">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Serial number</label>
+            <input type="text" name="serial_number" value="{{ caixa.serial_number }}" required style="text-transform:uppercase">
+            <span class="field-hint">Identificador da fabrica.</span>
+          </div>
+          <div class="form-group">
+            <label>Numero interno</label>
+            <input type="text" name="numero_interno" value="{{ caixa.numero_interno }}" required style="text-transform:uppercase">
+            <span class="field-hint">Codigo usado na operacao da empresa.</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Salvar ajustes</button>
+          <a href="/almoxarifado/caixas/{{ caixa.id }}" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas nesta caixa. Deseja sair mesmo assim?">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Hidrometros vinculados</div>
+    </div>
+    <div class="card-body">
+      <div class="chip-grid">
+        {% for hidrometro in get_caixa_hidrometros(caixa) %}
+        <span class="chip">{{ hidrometro.numero_serie }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

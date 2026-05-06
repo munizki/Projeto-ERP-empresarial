@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Ambiente
+.env
+*.env.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Banco
+*.sqlite
+*.db
+
+# Logs
+*.log
+logs/
+backups/
+certs/
+
+# Alembic (versões geradas localmente)
+# alembic/versions/*.py  # descomente se quiser ignorar migrações locais
+
+# Docker
+.dockerignore

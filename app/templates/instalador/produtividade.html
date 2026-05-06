@@ -1,0 +1,44 @@
+{% extends "shared/base.html" %}
+{% block title %}Minha Produtividade{% endblock %}
+{% block page_title %}Minha Produtividade{% endblock %}
+
+{% block content %}
+<section class="installer-hero mb-4">
+  <div>
+    <span class="executive-kicker">Produtividade individual</span>
+    <h2>{{ instalador.nome }}</h2>
+    <p class="text-muted">Somente os hidrometros baixados vinculados a voce.</p>
+  </div>
+  <div class="installer-hero-count"><strong>{{ total }}</strong><span>instalados</span></div>
+</section>
+
+{% include "instalador/_admin_preview_nav.html" %}
+
+<div class="installer-stack">
+  <section class="card">
+    <div class="card-header"><div class="card-title">Por data</div></div>
+    <div class="card-body stack">
+      {% for linha in por_dia %}
+      <div class="installer-row"><strong>{{ linha.dia }}</strong><span>{{ linha.total }}</span></div>
+      {% else %}
+      <p class="text-muted">Nenhuma instalacao registrada.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><div class="card-title">Historico</div></div>
+    <div class="card-body stack">
+      {% for item in historico %}
+      <div class="installer-item-block">
+        <strong>{{ item.hidrometro.numero_serie if item.hidrometro else 'Hidrometro' }}</strong>
+        <span class="text-muted">{{ item.data_instalacao|datetime_br }}{% if item.caixa %} | Caixa {{ item.caixa.numero_interno }}{% endif %}</span>
+        <span class="text-muted">Registrado por {{ item.usuario_registro.nome if item.usuario_registro else '-' }}</span>
+      </div>
+      {% else %}
+      <p class="text-muted">Nenhum historico para exibir.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

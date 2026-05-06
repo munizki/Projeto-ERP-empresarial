@@ -1,0 +1,76 @@
+{% set action_bundle = bundle if bundle is defined else None %}
+{% set advanced_mode = can_use_advanced_mode(request, usuario) %}
+{% if action_bundle %}
+<div class="context-actions {{ extra_class if extra_class is defined else '' }}">
+  {% if action_bundle.summary %}
+  <p class="context-summary">{{ action_bundle.summary }}</p>
+  {% endif %}
+
+  {% if action_bundle.primary and not (hide_primary is defined and hide_primary) %}
+  <div class="action-strip">
+    {% for action in action_bundle.primary %}
+      {% if action.href %}
+      <a href="{{ action.href }}" class="btn btn-sm btn-{{ action.tone }}">{{ action.label }}</a>
+      {% else %}
+      <span class="btn btn-sm btn-secondary disabled">{{ action.label }}</span>
+      {% endif %}
+      {% if action.note %}<span class="action-note">{{ action.note }}</span>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if not action_bundle.primary and action_bundle.blocked %}
+  <div class="context-disabled-card">
+    <strong>{{ action_bundle.blocked[0].label }}</strong>
+    <span>{{ action_bundle.blocked[0].reason }}</span>
+  </div>
+  {% endif %}
+
+  {% if action_bundle.secondary or action_bundle.blocked or (advanced_mode and action_bundle.advanced) %}
+  <details class="context-actions-more">
+    <summary>Mais opcoes</summary>
+    <div class="context-actions-stack">
+      {% for action in action_bundle.secondary %}
+      <div class="context-action-row">
+        <div>
+          <strong>{{ action.label }}</strong>
+          {% if action.note %}<div class="action-note">{{ action.note }}</div>{% endif %}
+        </div>
+        {% if action.href %}
+        <a href="{{ action.href }}" class="btn btn-sm btn-{{ action.tone }}">Abrir</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      {% for action in action_bundle.blocked %}
+      <div class="context-action-row disabled">
+        <div>
+          <strong>{{ action.label }}</strong>
+          <div class="action-note">{{ action.reason }}</div>
+        </div>
+        <span class="badge badge-secondary">Bloqueada</span>
+      </div>
+      {% endfor %}
+
+      {% if advanced_mode and action_bundle.advanced %}
+      <div class="context-mode-label">Modo avancado</div>
+      {% for action in action_bundle.advanced %}
+      <div class="context-action-row {{ '' if action.href else 'disabled' }}">
+        <div>
+          <strong>{{ action.label }}</strong>
+          {% if action.reason %}<div class="action-note">{{ action.reason }}</div>{% endif %}
+          {% if action.note %}<div class="action-note">{{ action.note }}</div>{% endif %}
+        </div>
+        {% if action.href %}
+        <a href="{{ action.href }}" class="btn btn-sm btn-{{ action.tone }}">Abrir</a>
+        {% else %}
+        <span class="badge badge-secondary">Indisponivel</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
+</div>
+{% endif %}

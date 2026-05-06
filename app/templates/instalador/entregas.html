@@ -1,0 +1,63 @@
+{% extends "shared/base.html" %}
+{% block title %}Minhas Entregas{% endblock %}
+{% block page_title %}Minhas Entregas{% endblock %}
+
+{% block content %}
+<section class="installer-hero mb-4">
+  <div>
+    <span class="executive-kicker">Conferencia de recebimento</span>
+    <h2>{{ instalador.nome }}</h2>
+    <p class="text-muted">Confira as entregas feitas pelo almoxarifado antes de confirmar o recebimento.</p>
+  </div>
+  <div class="installer-hero-count">
+    <strong>{{ entregas|length }}</strong>
+    <span>entrega(s)</span>
+  </div>
+</section>
+
+{% include "instalador/_admin_preview_nav.html" %}
+
+{% if request.query_params.get("confirmado") %}
+<div class="alert alert-success">Recebimento confirmado com auditoria registrada.</div>
+{% endif %}
+{% if request.query_params.get("divergencia") %}
+<div class="alert alert-warning">Divergencia enviada para tratamento administrativo.</div>
+{% endif %}
+
+<div class="installer-card-grid">
+  {% for entrega in entregas %}
+  {% set total_hidros = namespace(valor=0) %}
+  {% for item in entrega.itens_caixa %}
+    {% set total_hidros.valor = total_hidros.valor + (get_caixa_hidrometros(item.caixa)|length if item.caixa else 0) %}
+  {% endfor %}
+  {% set recebimento = entrega.recebimento_instalador_status or 'pendente' %}
+  <article class="installer-card">
+    <div class="installer-card-head">
+      <div>
+        <span class="text-muted">Solicitacao #{{ entrega.id }}</span>
+        <h3>{{ entrega.entregue_em|datetime_br if entrega.entregue_em else entrega.criado_em|datetime_br }}</h3>
+      </div>
+      {% if recebimento == 'confirmado' %}
+      <span class="badge badge-success">Confirmado</span>
+      {% elif recebimento == 'divergencia' %}
+      <span class="badge badge-warning">Divergencia</span>
+      {% else %}
+      <span class="badge badge-info">Pendente</span>
+      {% endif %}
+    </div>
+    <div class="installer-metrics">
+      <div><strong>{{ entrega.itens_caixa|length }}</strong><span>Caixas</span></div>
+      <div><strong>{{ total_hidros.valor }}</strong><span>Hidrometros</span></div>
+      <div><strong>{{ entrega.itens_peca|length }}</strong><span>Tipos de peca</span></div>
+    </div>
+    <div class="installer-meta">
+      <span>Criada por {{ entrega.criado_por.nome if entrega.criado_por else '-' }}</span>
+      <span>Entregue por {{ entrega.entregue_por.nome if entrega.entregue_por else '-' }}</span>
+    </div>
+    <a href="/instalador/entregas/{{ entrega.id }}{{ portal_query }}" class="btn btn-primary btn-lg">Conferir entrega</a>
+  </article>
+  {% else %}
+  <div class="empty-state"><p>Nenhuma entrega realizada para conferencia.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

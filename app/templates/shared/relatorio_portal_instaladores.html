@@ -1,0 +1,90 @@
+{% extends "shared/base.html" %}
+{% block title %}Relatorio - Portal dos Instaladores{% endblock %}
+{% block page_title %}Portal dos Instaladores{% endblock %}
+
+{% block content %}
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Relatorio das novas funcoes mobile</h2>
+    <p>Visao administrativa de vinculo, entregas, confirmacoes, divergencias, produtividade, pecas e carcacas por instalador.</p>
+  </div>
+  <div class="page-intro-badge">{{ kpis.instaladores }} instalador(es)</div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/relatorios" class="btn btn-outline btn-sm">Relatorios</a>
+  <a href="/relatorios/confirmacoes-instalador" class="btn btn-outline btn-sm">Confirmacoes</a>
+  <a href="/relatorios/portal-instaladores/exportar.xlsx" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+</div>
+
+<div class="executive-band mb-4">
+  <div class="executive-band-item"><span>Instaladores</span><strong>{{ kpis.instaladores }}</strong></div>
+  <div class="executive-band-item"><span>Pendentes</span><strong>{{ kpis.pendentes }}</strong></div>
+  <div class="executive-band-item"><span>Divergencias</span><strong>{{ kpis.divergencias }}</strong></div>
+  <div class="executive-band-item"><span>Confirmados</span><strong>{{ kpis.confirmados }}</strong></div>
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Instalador</th>
+          <th>Matricula</th>
+          <th>Usuario</th>
+          <th>Status</th>
+          <th>Solicitacoes</th>
+          <th>Recebimentos</th>
+          <th>Produtividade</th>
+          <th>Carcacas</th>
+          <th>Ultimos eventos</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in linhas %}
+        <tr>
+          <td>
+            <strong>{{ row.nome }}</strong>
+            <div class="text-muted">{{ 'Ativo' if row.ativo else 'Inativo' }}</div>
+          </td>
+          <td>{{ row.matricula }}</td>
+          <td>{{ row.usuario }}</td>
+          <td>
+            {% if row.status_operacional == 'DIVERGENCIA' %}
+              <span class="badge badge-danger">DIVERGENCIA</span>
+            {% elif row.status_operacional == 'PENDENTE' %}
+              <span class="badge badge-warning">PENDENTE</span>
+            {% elif row.status_operacional == 'INATIVO' %}
+              <span class="badge badge-secondary">INATIVO</span>
+            {% else %}
+              <span class="badge badge-success">OK</span>
+            {% endif %}
+          </td>
+          <td>
+            <div>Total: {{ row.solicitacoes_total }}</div>
+            <div class="text-muted">Pendentes: {{ row.solicitacoes_pendentes }} | Separadas: {{ row.solicitacoes_separadas }} | Entregues: {{ row.solicitacoes_entregues }}</div>
+          </td>
+          <td>
+            <div>Confirmados: {{ row.recebimentos_confirmados }}</div>
+            <div class="text-muted">Pendentes: {{ row.recebimentos_pendentes }} | Diverg.: {{ row.recebimentos_divergentes }}</div>
+          </td>
+          <td>
+            <div>Hidrometros: {{ row.hidrometros_instalados }}</div>
+            <div class="text-muted">Pecas recebidas: {{ row.pecas_recebidas }}</div>
+          </td>
+          <td>{{ row.carcacas_devolvidas }}</td>
+          <td>
+            <div>Solic.: {{ row.ultima_solicitacao|datetime_br if row.ultima_solicitacao else '-' }}</div>
+            <div class="text-muted">Entrega: {{ row.ultima_entrega|datetime_br if row.ultima_entrega else '-' }}</div>
+            <div class="text-muted">Conf.: {{ row.ultima_confirmacao|datetime_br if row.ultima_confirmacao else '-' }}</div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-center text-muted" style="padding:30px">Nenhum instalador cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

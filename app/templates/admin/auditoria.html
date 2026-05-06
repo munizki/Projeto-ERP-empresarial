@@ -1,0 +1,174 @@
+{% extends "shared/base.html" %}
+{% block title %}Auditoria{% endblock %}
+{% block page_title %}Auditoria{% endblock %}
+
+{% block content %}
+{% set pagina_atual = registros|length %}
+<section class="executive-hero executive-hero-auditoria mb-4">
+  <div class="executive-hero-main">
+    <span class="executive-kicker">Admin control</span>
+    <h2>Auditoria operacional</h2>
+    <div class="executive-chip-row">
+      <span class="executive-chip">Fuso {{ APP_TIMEZONE }}</span>
+      <span class="executive-chip">Pagina {{ pagina }} / {{ total_paginas }}</span>
+    </div>
+  </div>
+  <div class="executive-hero-metrics">
+    <div class="executive-metric-card">
+      <span>Total</span>
+      <strong>{{ total }}</strong>
+      <small>Eventos</small>
+    </div>
+    <div class="executive-metric-card">
+      <span>Na pagina</span>
+      <strong>{{ pagina_atual }}</strong>
+      <small>Registros visiveis</small>
+    </div>
+    <div class="executive-metric-card">
+      <span>Filtro</span>
+      <strong>{{ filtros.severidade or filtros.acao or 'Todos' }}</strong>
+      <small>{{ filtros.usuario or filtros.categoria or 'Todos os usuarios' }}</small>
+    </div>
+  </div>
+</section>
+
+<div class="toolbar-strip mb-3">
+  <a href="/admin/auditoria?severidade=CRITICO" class="btn btn-danger btn-sm">Criticos</a>
+  <a href="/admin/auditoria?severidade=SUSPEITO" class="btn btn-warning btn-sm">Suspeitos</a>
+  <a href="/admin/auditoria?resultado=BLOQUEADO" class="btn btn-outline btn-sm">Bloqueados</a>
+  <a href="/admin/auditoria?acao=LOGIN" class="btn btn-outline btn-sm">Logins</a>
+  <a href="/admin/monitoramento" class="btn btn-secondary btn-sm">Monitoramento</a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <div class="card-title">Filtros</div>
+  </div>
+  <div class="card-body">
+    <form method="get" class="grid-4">
+      <div class="form-group mb-0">
+        <label>Usuario</label>
+        <input type="text" name="usuario_filtro" value="{{ filtros.usuario }}" placeholder="Nome ou email">
+      </div>
+      <div class="form-group mb-0">
+        <label>Acao</label>
+        <input type="text" name="acao" value="{{ filtros.acao }}" placeholder="LOGIN, ENTREGA, CREATE">
+      </div>
+      <div class="form-group mb-0">
+        <label>Severidade</label>
+        <select name="severidade">
+          <option value="">Todas</option>
+          {% for item in ['NORMAL', 'SUSPEITO', 'CRITICO'] %}
+          <option value="{{ item }}" {% if filtros.severidade == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group mb-0">
+        <label>Resultado</label>
+        <select name="resultado">
+          <option value="">Todos</option>
+          {% for item in ['SUCESSO', 'BLOQUEADO', 'FALHA'] %}
+          <option value="{{ item }}" {% if filtros.resultado == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group mb-0">
+        <label>Categoria</label>
+        <input type="text" name="categoria" value="{{ filtros.categoria }}" placeholder="SEGURANCA, MANUTENCAO">
+      </div>
+      <div class="form-group mb-0">
+        <label>Tabela</label>
+        <input type="text" name="tabela" value="{{ filtros.tabela }}" placeholder="usuarios, estoque">
+      </div>
+      <div class="form-group mb-0">
+        <label>Data inicial</label>
+        <input type="date" name="data_inicio" value="{{ filtros.data_inicio }}">
+      </div>
+      <div class="form-group mb-0">
+        <label>Data final</label>
+        <input type="date" name="data_fim" value="{{ filtros.data_fim }}">
+      </div>
+      <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary">Aplicar</button>
+        <a href="/admin/auditoria" class="btn btn-secondary">Limpar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if registros %}
+<div class="audit-grid">
+  {% for r in registros %}
+  {% set tone = 'success' if 'SUCESSO' in r.acao or r.acao.startswith('CREATE') or r.acao.startswith('UPDATE') else 'danger' if 'DELETE' in r.acao or 'FALHA' in r.acao else 'warning' if 'CANCEL' in r.acao or 'OVERRIDE' in r.acao else 'info' %}
+  <article class="audit-card audit-card-{{ tone }}">
+      <div class="audit-card-head">
+        <div class="audit-chip-row">
+          <span class="audit-action-badge audit-action-{{ tone }}">{{ r.acao }}</span>
+          <span class="audit-entity-pill">{{ r.severidade or 'NORMAL' }}</span>
+          <span class="audit-entity-pill">{{ r.resultado or 'SUCESSO' }}</span>
+          <span class="audit-entity-pill">{{ r.tabela or 'sistema' }}{% if r.registro_id %} #{{ r.registro_id }}{% endif %}</span>
+        </div>
+        <div class="audit-time">{{ r.criado_em|datetime_br_seconds }}</div>
+    </div>
+
+    <div class="audit-card-body">
+      <div class="audit-primary-line">
+        <strong>{{ r.usuario_nome or (r.usuario.nome if r.usuario else 'Sistema') }}</strong>
+        {% if r.usuario_email or r.usuario %}
+        <span>{{ r.usuario_email or r.usuario.email }}</span>
+        {% endif %}
+      </div>
+
+      {% if r.descricao %}
+      <div class="audit-description">{{ r.descricao }}</div>
+      {% endif %}
+
+      <div class="audit-meta-row">
+        <span>ID {{ r.id }}</span>
+        <span>IP cliente {{ r.ip_cliente or r.ip or 'nao informado' }}</span>
+        <span>Conexao/proxy {{ r.ip_conexao or '-' }}</span>
+        <span>{{ r.usuario_perfil or '-' }}</span>
+      </div>
+
+      <div class="audit-meta-row">
+        <span{% if r.user_agent %} title="{{ r.user_agent }}"{% endif %}>Navegador {{ r.user_agent|browser_label }}</span>
+        {% if r.x_real_ip %}<span>X-Real-IP {{ r.x_real_ip }}</span>{% endif %}
+        {% if r.x_forwarded_for %}<span>XFF {{ r.x_forwarded_for }}</span>{% endif %}
+      </div>
+
+      {% if r.dados_antes or r.dados_depois %}
+      <details class="audit-details">
+        <summary>Detalhes</summary>
+        <div class="audit-json-grid">
+          <div class="audit-json-card">
+            <div class="audit-json-title">Antes</div>
+            <pre>{{ r.dados_antes | tojson(indent=2) if r.dados_antes else '-' }}</pre>
+          </div>
+          <div class="audit-json-card">
+            <div class="audit-json-title">Depois</div>
+            <pre>{{ r.dados_depois | tojson(indent=2) if r.dados_depois else '-' }}</pre>
+          </div>
+        </div>
+      </details>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><p>Nenhum registro encontrado.</p></div>
+{% endif %}
+
+{% if total_paginas > 1 %}
+<div class="executive-pagination mt-3">
+  {% for p in range(1, total_paginas + 1) %}
+  <a
+    href="?pagina={{ p }}&usuario_filtro={{ filtros.usuario | urlencode }}&acao={{ filtros.acao | urlencode }}&severidade={{ filtros.severidade }}&categoria={{ filtros.categoria | urlencode }}&resultado={{ filtros.resultado }}&tabela={{ filtros.tabela | urlencode }}&data_inicio={{ filtros.data_inicio }}&data_fim={{ filtros.data_fim }}"
+    class="page-link {{ 'active' if p == pagina else '' }}"
+  >
+    {{ p }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

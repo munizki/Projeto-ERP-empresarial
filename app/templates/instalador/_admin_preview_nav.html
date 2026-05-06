@@ -1,0 +1,10 @@
+{% if admin_preview %}
+<div class="toolbar-strip mb-3 no-print">
+  <span class="badge badge-warning">Visualizacao admin</span>
+  <a href="/admin/portal-instaladores" class="btn btn-outline btn-sm">Trocar instalador</a>
+  <a href="/instalador/entregas{{ portal_query }}" class="btn btn-sm {{ 'btn-primary' if current_path.startswith('/instalador/entregas') else 'btn-outline' }}">Entregas</a>
+  <a href="/instalador/solicitacoes{{ portal_query }}" class="btn btn-sm {{ 'btn-primary' if current_path.startswith('/instalador/solicitacoes') else 'btn-outline' }}">Solicitacoes</a>
+  <a href="/instalador/carcacas{{ portal_query }}" class="btn btn-sm {{ 'btn-primary' if current_path.startswith('/instalador/carcacas') else 'btn-outline' }}">Carcacas</a>
+  <a href="/instalador/produtividade{{ portal_query }}" class="btn btn-sm {{ 'btn-primary' if current_path.startswith('/instalador/produtividade') else 'btn-outline' }}">Produtividade</a>
+</div>
+{% endif %}

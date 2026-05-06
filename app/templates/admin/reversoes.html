@@ -1,0 +1,152 @@
+{% extends "shared/base.html" %}
+{% block title %}Reversoes{% endblock %}
+{% block page_title %}Central de Reversoes{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('reversao_entrega') %}
+<div class="alert alert-success">Entrega revertida com sucesso.</div>
+{% endif %}
+{% if request.query_params.get('reversao_baixa') %}
+<div class="alert alert-success">Baixa revertida com sucesso.</div>
+{% endif %}
+{% if request.query_params.get('estorno') %}
+<div class="alert alert-success">Entrada manual estornada com sucesso.</div>
+{% endif %}
+{% if request.query_params.get('reversao_conferencia') %}
+<div class="alert alert-success">Conferencia revertida com sucesso.</div>
+{% endif %}
+{% if request.query_params.get('reversao_manutencao') %}
+<div class="alert alert-success">Manutencao revertida com sucesso.</div>
+{% endif %}
+
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Central administrativa de reversoes</h2>
+  </div>
+  <div class="page-intro-badge">Admin</div>
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Entregas reversiveis</div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>#</th><th>Instalador</th><th>Caixas</th><th>Data</th><th>Acao</th></tr></thead>
+        <tbody>
+          {% for s in solicitacoes_entregues %}
+          <tr>
+            <td>#{{ s.id }}</td>
+            <td>{{ s.instalador.nome if s.instalador else '-' }}</td>
+            <td>{{ s.itens_caixa|length }}</td>
+            <td>{{ s.entregue_em|datetime_br_seconds if s.entregue_em else '-' }}</td>
+            <td><a href="/admin/solicitacoes/{{ s.id }}/reverter-entrega?next_path=/admin/reversoes" class="btn btn-danger btn-sm">Reverter entrega</a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted" style="padding:24px;">Nenhuma entrega recente.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Baixas reversiveis</div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Serie</th><th>Caixa</th><th>Data</th><th>Acao</th></tr></thead>
+        <tbody>
+          {% for h in hidrometros_instalados %}
+          <tr>
+            <td>{{ h.numero_serie }}</td>
+            <td>{{ h.caixa.numero_interno if h.caixa else '-' }}</td>
+            <td>{{ h.instalado_em|datetime_br_seconds if h.instalado_em else '-' }}</td>
+            <td><a href="/admin/hidrometros/{{ h.id }}/reverter-baixa?next_path=/admin/reversoes" class="btn btn-danger btn-sm">Reverter baixa</a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Nenhuma baixa recente.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header"><div class="card-title">Manutencoes reversiveis</div></div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Serie</th><th>Caixa origem</th><th>Status</th><th>Abertura</th><th>Acao</th></tr></thead>
+      <tbody>
+        {% for item in manutencoes %}
+        <tr>
+          <td class="mono">{{ item.hidrometro.numero_serie if item.hidrometro else '-' }}</td>
+          <td>
+            {{ item.caixa_origem.numero_interno if item.caixa_origem else '-' }}
+            {% if item.caixa_origem and item.caixa_origem.status.value == 'em_estoque' %}
+            <div class="text-muted">Caixa em estoque</div>
+            {% endif %}
+          </td>
+          <td><span class="badge badge-info">{{ item.status }}</span></td>
+          <td>{{ item.data_abertura|datetime_br_seconds }}</td>
+          <td><a href="/admin/manutencoes/{{ item.id }}/reverter?next_path=/admin/reversoes" class="btn btn-danger btn-sm">Reverter manutencao</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted" style="padding:24px;">Nenhuma manutencao reversivel recente.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section-grid mt-4">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Entradas manuais de peca</div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>ID</th><th>Peca</th><th>Quantidade</th><th>Data</th><th>Acao</th></tr></thead>
+        <tbody>
+          {% for mov in entradas_manuais %}
+          <tr>
+            <td>#{{ mov.id }}</td>
+            <td>{{ mov.tipo_peca.nome if mov.tipo_peca else '-' }}</td>
+            <td>{{ mov.quantidade }}</td>
+            <td>{{ mov.criado_em|datetime_br_seconds }}</td>
+            <td><a href="/admin/pecas/movimentacoes/{{ mov.id }}/estornar-entrada?next_path=/admin/reversoes" class="btn btn-danger btn-sm">Estornar</a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted" style="padding:24px;">Nenhuma entrada manual recente.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Conferencias reversiveis</div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>ID</th><th>Instalador</th><th>Status</th><th>Data</th><th>Acao</th></tr></thead>
+        <tbody>
+          {% for conferencia in conferencias %}
+          <tr>
+            <td>#{{ conferencia.id }}</td>
+            <td>{{ conferencia.instalador.nome if conferencia.instalador else '-' }}</td>
+            <td>
+              {% if conferencia.tem_divergencia %}
+              <span class="badge badge-danger">Com divergencia</span>
+              {% else %}
+              <span class="badge badge-success">Sem divergencia</span>
+              {% endif %}
+            </td>
+            <td>{{ conferencia.data_conferencia|datetime_br_seconds }}</td>
+            <td><a href="/admin/conferencias/{{ conferencia.id }}/reverter?next_path=/admin/reversoes" class="btn btn-danger btn-sm">Reverter</a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted" style="padding:24px;">Nenhuma conferencia recente.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

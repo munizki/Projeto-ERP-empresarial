@@ -1,0 +1,95 @@
+{% extends "shared/base.html" %}
+{% block title %}Conferencia - {{ instalador.nome }}{% endblock %}
+{% block page_title %}Conferencia - {{ instalador.nome }}{% endblock %}
+{% block content %}
+<div class="page-intro mb-4">
+  <div>
+    <h2>Conferencia fisica com ajuste rastreado</h2>
+    <p>Informe a quantidade real em posse do instalador. O sistema registra divergencias e atualiza o historico.</p>
+  </div>
+  <div class="page-intro-badge">{{ instalador.matricula }}</div>
+</div>
+
+<div style="max-width:680px">
+  <div class="alert alert-info">
+    Confira fisicamente as pecas em posse do instalador e confirme a quantidade real antes de registrar.
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Pecas em posse de {{ instalador.nome }}</div>
+      <span class="badge badge-secondary">{{ instalador.matricula }}</span>
+    </div>
+    <div class="card-body">
+      <form method="post" action="/manipulador/conferencia/{{ instalador.id }}" data-dirty-check="true">
+        {% if pecas_instalador %}
+        <div class="table-wrapper" style="margin-bottom:20px">
+          <table>
+            <thead>
+              <tr>
+                <th>Peca</th>
+                <th>Qtd. sistema</th>
+                <th>Qtd. real</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ip in pecas_instalador %}
+              <tr>
+                <td>
+                  <strong>{{ ip.tipo_peca.nome }}</strong>
+                  <div class="text-muted">{{ ip.tipo_peca.unidade_medida }}</div>
+                </td>
+                <td><span class="badge badge-secondary">{{ ip.quantidade }}</span></td>
+                <td>
+                  <input type="number" name="qtd_real_{{ ip.tipo_peca_id }}" value="{{ ip.quantidade }}" min="0" required data-sistema="{{ ip.quantidade }}" oninput="verificarDivergencia(this, {{ ip.quantidade }})">
+                  <div id="div_{{ ip.tipo_peca_id }}" class="text-muted fs-sm mt-3"></div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+          Nenhuma conexão registrada para este instalador no sistema.
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label>Observacoes</label>
+          <textarea name="observacoes" placeholder="Registre qualquer observacao sobre a conferencia"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-success">Registrar conferencia</button>
+          <a href="/manipulador/conferencia" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas nesta conferencia. Deseja voltar para a lista?">Voltar para conferencias</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verificarDivergencia(input, qtdSistema) {
+  const div = document.getElementById("div_" + input.name.replace("qtd_real_", ""));
+  const real = parseInt(input.value, 10) || 0;
+  const diff = real - qtdSistema;
+
+  if (diff === 0) {
+    div.innerHTML = '<span style="color:var(--success)">OK</span>';
+  } else if (diff > 0) {
+    div.innerHTML = '<span style="color:var(--warning)">+' + diff + " a mais</span>";
+  } else {
+    div.innerHTML = '<span style="color:var(--danger)">' + diff + " a menos</span>";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll('input[name^="qtd_real_"]').forEach(function (input) {
+    input.dispatchEvent(new Event("input"));
+  });
+});
+</script>
+{% endblock %}

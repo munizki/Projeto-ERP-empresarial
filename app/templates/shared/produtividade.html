@@ -1,0 +1,145 @@
+{% extends "shared/base.html" %}
+{% block title %}Produtividade{% endblock %}
+{% block page_title %}Produtividade{% endblock %}
+
+{% block topbar_actions %}
+  {% if pode_exportar %}
+  <a href="/produtividade/exportar.xlsx?{{ request.url.query }}" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="executive-hero executive-hero-relatorios mb-4">
+  <div class="executive-hero-main">
+    <span class="executive-kicker">&#128200; GMF</span>
+    <h2>Produtividade operacional</h2>
+    <div class="executive-chip-row">
+      <span class="executive-chip">&#9989; Baixas reais</span>
+      <span class="executive-chip">&#128230; Caixas</span>
+      <span class="executive-chip">&#128295; Pecas</span>
+    </div>
+  </div>
+  <div class="executive-hero-metrics">
+    <div class="executive-metric-card">
+      <span>Hidrometros</span>
+      <strong>{{ produtividade.kpis.hidrometros }}</strong>
+      <small>Instalados</small>
+    </div>
+    <div class="executive-metric-card">
+      <span>Caixas</span>
+      <strong>{{ produtividade.kpis.caixas }}</strong>
+      <small>Finalizadas</small>
+    </div>
+    <div class="executive-metric-card">
+      <span>Pecas</span>
+      <strong>{{ produtividade.kpis.pecas }}</strong>
+      <small>Usadas</small>
+    </div>
+  </div>
+</section>
+
+<form method="get" class="card mb-4">
+  <div class="card-body">
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label>Instalador</label>
+        <select name="instalador_id">
+          <option value="0">Todos</option>
+          {% for instalador in instaladores %}
+          <option value="{{ instalador.id }}" {% if filtros.instalador_id == instalador.id %}selected{% endif %}>{{ instalador.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Mes</label>
+        <input type="month" name="mes" value="{{ filtros.mes }}">
+      </div>
+      <div class="form-group">
+        <label>Status da caixa</label>
+        <select name="status">
+          <option value="">Todos</option>
+          {% for status in CaixaStatus %}
+          <option value="{{ status.value }}" {% if filtros.status == status.value or filtros.status == status.name %}selected{% endif %}>{{ humanize_status(status) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Inicio</label>
+        <input type="date" name="data_inicio" value="{{ filtros.data_inicio }}">
+      </div>
+      <div class="form-group">
+        <label>Fim</label>
+        <input type="date" name="data_fim" value="{{ filtros.data_fim }}">
+      </div>
+      <div class="form-group">
+        <label>Tipo de peca</label>
+        <select name="tipo_peca_id">
+          <option value="0">Todas</option>
+          {% for tipo in tipos_pecas %}
+          <option value="{{ tipo.id }}" {% if filtros.tipo_peca_id == tipo.id %}selected{% endif %}>{{ tipo.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      <a href="/produtividade" class="btn btn-secondary">Limpar</a>
+    </div>
+  </div>
+</form>
+
+{% if produtividade.linhas %}
+<div class="report-command-grid mb-4">
+  {% for item in produtividade.linhas %}
+  <article class="report-command-card {{ loop.cycle('cyan', 'green', 'blue', 'amber') }}">
+    <div class="report-command-head">
+      <div class="report-command-icon">&#128119;</div>
+      <span class="report-command-tag">{{ item.periodo }}</span>
+    </div>
+    <div class="report-command-title">{{ item.instalador }}</div>
+    <div class="chip-grid mt-3">
+      <span class="chip">&#9989; {{ item.hidrometros_instalados }} hidrometros</span>
+      <span class="chip">&#128230; {{ item.caixas_finalizadas }} caixas</span>
+      <span class="chip">&#128295; {{ item.total_pecas }} pecas</span>
+      <span class="chip">&#128344; {{ item.ultima_instalacao|datetime_br if item.ultima_instalacao else "-" }}</span>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><p>Nenhuma produtividade encontrada para o filtro.</p></div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Historico de instalacoes</div>
+    <span class="text-muted">{{ produtividade.instalacoes|length }} registro(s)</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Instalador</th>
+          <th>Hidrometro</th>
+          <th>Caixa</th>
+          <th>Solicitacao</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in produtividade.instalacoes %}
+        <tr>
+          <td>{{ item.data_instalacao|datetime_br_seconds }}</td>
+          <td>{{ item.instalador.nome if item.instalador else "-" }}</td>
+          <td class="mono">{{ item.hidrometro.numero_serie if item.hidrometro else "-" }}</td>
+          <td>{{ item.caixa.numero_interno if item.caixa else "-" }}</td>
+          <td>{{ "#" ~ item.solicitacao_id if item.solicitacao_id else "-" }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">Sem instalacoes no periodo.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

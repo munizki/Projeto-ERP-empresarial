@@ -1,0 +1,90 @@
+{% extends "shared/base.html" %}
+{% block title %}Nova Transferencia{% endblock %}
+{% block page_title %}Nova transferencia{% endblock %}
+
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<form method="post" class="card" data-dirty-check>
+  <div class="card-header"><div class="card-title">&#127970; Transferencia para outra empresa</div></div>
+  <div class="card-body">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Empresa destino</label>
+        <input name="empresa_destino" required>
+      </div>
+      <div class="form-group">
+        <label>Responsavel</label>
+        <input name="responsavel" required>
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" name="data_transferencia">
+      </div>
+      <div class="form-group">
+        <label>Documento</label>
+        <input name="documento_referencia" placeholder="Protocolo ou formulario">
+      </div>
+    </div>
+
+    <div class="grid-2 mb-4">
+      <div class="selection-card">
+        <div class="selection-card-head">
+          <strong>&#128230; Caixas disponiveis</strong>
+          <span class="badge badge-info">{{ caixas|length }}</span>
+        </div>
+        <div class="stack-sm">
+          {% for caixa in caixas %}
+          <label class="inline-pill-row">
+            <span><input type="checkbox" name="caixa_ids" value="{{ caixa.id }}"> {{ caixa.numero_interno }}</span>
+            <span class="badge badge-secondary">{{ caixa.serial_number }}</span>
+          </label>
+          {% else %}
+          <div class="empty-state"><p>Nenhuma caixa disponivel.</p></div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="selection-card">
+        <div class="selection-card-head">
+          <strong>&#128295; Pecas</strong>
+          <span class="badge badge-info">{{ tipos|length }}</span>
+        </div>
+        <div class="stack-sm">
+          {% for tipo in tipos %}
+          <div class="inline-pill-row">
+            <label>{{ tipo.nome }}</label>
+            <div>
+              <input type="number" name="peca_{{ tipo.id }}" min="0" max="{{ tipo.estoque.quantidade_atual if tipo.estoque else 0 }}" value="0" style="max-width: 120px;">
+              <span class="badge badge-secondary">{{ tipo.estoque.quantidade_atual if tipo.estoque else 0 }}</span>
+            </div>
+          </div>
+          {% else %}
+          <div class="empty-state"><p>Nenhuma peca ativa.</p></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Observacao</label>
+      <textarea name="observacao" rows="2"></textarea>
+    </div>
+
+    <div class="confirmation-block mb-3">
+      <div class="confirmation-head">
+        <strong>Confirmacao contextual</strong>
+      </div>
+      <label class="inline-pill-row">
+        <span>Confirmo que caixas e pecas sairao do estoque disponivel.</span>
+        <input type="checkbox" name="confirmacao_contexto" value="1" required>
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Registrar transferencia</button>
+      <a href="/almoxarifado/transferencias" class="btn btn-secondary">Cancelar</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

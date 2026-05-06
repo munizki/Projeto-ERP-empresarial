@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-cookie-name" content="{{ CSRF_COOKIE_NAME }}">
+  {% if usuario %}
+  <meta name="session-user-role" content="{{ usuario.role.value }}">
+  <meta name="session-idle-timeout-seconds" content="{{ SESSION_IDLE_TIMEOUT_SECONDS }}">
+  <meta name="session-ping-url" content="/auth/session-ping">
+  {% endif %}
+  <title>{% block title %}Sistema de Hidrometros{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css?v={{ ASSET_VERSION }}">
+</head>
+{% set current_path = request.url.path if request else '' %}
+{% if current_path.startswith('/admin') %}
+  {% set section_label = 'Administracao' %}
+  {% set section_key = 'admin' %}
+{% elif current_path.startswith('/almoxarifado') %}
+  {% set section_label = 'Almoxarifado' %}
+  {% set section_key = 'almoxarifado' %}
+{% elif current_path.startswith('/manipulador') %}
+  {% set section_label = 'Manipulador' %}
+  {% set section_key = 'manipulador' %}
+{% elif current_path.startswith('/instalador') %}
+  {% set section_label = 'Instalador' %}
+  {% set section_key = 'instalador' %}
+{% elif current_path.startswith('/relatorios') %}
+  {% set section_label = 'Relatorios' %}
+  {% set section_key = 'relatorios' %}
+{% elif current_path.startswith('/auth') %}
+  {% set section_label = 'Conta' %}
+  {% set section_key = 'conta' %}
+{% else %}
+  {% set section_label = 'Operacao' %}
+  {% set section_key = 'dashboard' %}
+{% endif %}
+<body class="theme-{{ section_key }}">
+<div class="app-wrapper">
+  <nav class="sidebar" id="sidebar">
+    <a href="/dashboard" class="sidebar-logo brand-home-link" data-safe-nav="Existem alteracoes nao salvas nesta tela. Deseja voltar ao painel principal?">
+      <div class="brand-mark" aria-hidden="true">
+        <span>GMF</span>
+      </div>
+      <div class="logo-copy">
+        <div class="logo-text">GMF</div>
+        <div class="logo-app">Gestao de Medicao e Faturamento Ltda</div>
+      </div>
+    </a>
+
+    <div class="sidebar-nav">
+      {% set is_instalador_user = usuario and usuario.role.value == 'instalador' %}
+      {% if is_instalador_user %}
+      <div class="nav-section-title">Meu acesso</div>
+      <a href="/instalador/entregas" class="nav-link {% if current_path.startswith('/instalador/entregas') %}active{% endif %}">
+        <span class="nav-icon">&#128230;</span> Minhas Entregas
+      </a>
+      <a href="/instalador/solicitacoes" class="nav-link {% if current_path.startswith('/instalador/solicitacoes') %}active{% endif %}">
+        <span class="nav-icon">&#128203;</span> Minhas Solicitacoes
+      </a>
+      <a href="/instalador/carcacas" class="nav-link {% if current_path.startswith('/instalador/carcacas') %}active{% endif %}">
+        <span class="nav-icon">&#9851;</span> Minhas Carcacas
+      </a>
+      <a href="/instalador/produtividade" class="nav-link {% if current_path.startswith('/instalador/produtividade') %}active{% endif %}">
+        <span class="nav-icon">&#128200;</span> Minha Produtividade
+      </a>
+      {% else %}
+      <div class="nav-section-title">Geral</div>
+      <a href="/dashboard" class="nav-link {% if current_path == '/dashboard' %}active{% endif %}">
+        <span class="nav-icon">&#127968;</span> Dashboard
+      </a>
+      {% if usuario %}
+      <a href="/feedback" class="nav-link {% if current_path == '/feedback' %}active{% endif %}">
+        <span class="nav-icon">&#128172;</span> Feedback
+      </a>
+      {% endif %}
+
+      {% if usuario and usuario.role.value in ['manipulador', 'admin'] %}
+      <div class="nav-section-title">Manipulador</div>
+      <a href="/manipulador/solicitacoes/nova" class="nav-link {% if '/solicitacoes/nova' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128221;</span> Nova Solicitacao
+      </a>
+      <a href="/manipulador/solicitacoes" class="nav-link {% if current_path == '/manipulador/solicitacoes' %}active{% endif %}">
+        <span class="nav-icon">&#128203;</span> Solicitacoes
+      </a>
+      <a href="/manipulador/instaladores" class="nav-link {% if '/manipulador/instaladores' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128119;</span> Instaladores
+      </a>
+      <a href="/manipulador/baixa-hidrometro" class="nav-link {% if 'baixa-hidrometro' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#9989;</span> Baixa
+      </a>
+      <a href="/manipulador/rastrear" class="nav-link {% if 'rastrear' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128270;</span> Rastrear
+      </a>
+      <a href="/manipulador/conferencia" class="nav-link {% if 'conferencia' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128203;</span> Conferencia
+      </a>
+      <a href="/produtividade" class="nav-link {% if current_path.startswith('/produtividade') %}active{% endif %}">
+        <span class="nav-icon">&#128200;</span> Produtividade
+      </a>
+      {% endif %}
+
+      {% if usuario and usuario.role.value in ['almoxarifado', 'admin'] %}
+      <div class="nav-section-title">Almoxarifado</div>
+      <a href="/almoxarifado/caixas/nova" class="nav-link {% if '/caixas/nova' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#10133;</span> Cadastrar Caixa
+      </a>
+      <a href="/almoxarifado/caixas" class="nav-link {% if current_path == '/almoxarifado/caixas' %}active{% endif %}">
+        <span class="nav-icon">&#128230;</span> Caixas
+      </a>
+      <a href="/almoxarifado/estoque" class="nav-link {% if current_path == '/almoxarifado/estoque' %}active{% endif %}">
+        <span class="nav-icon">&#128295;</span> Estoque
+      </a>
+      <a href="/almoxarifado/estoque-inteligente" class="nav-link {% if current_path == '/almoxarifado/estoque-inteligente' %}active{% endif %}">
+        <span class="nav-icon">&#128200;</span> Estoque Inteligente
+      </a>
+      <a href="/almoxarifado/manutencao" class="nav-link {% if '/almoxarifado/manutencao' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128736;</span> Manutencao
+      </a>
+      <a href="/almoxarifado/pecas/entrada" class="nav-link {% if '/pecas/entrada' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128228;</span> Entrada de Pecas
+      </a>
+      <a href="/almoxarifado/solicitacoes" class="nav-link {% if '/almoxarifado/solicitacoes' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128666;</span> Separacao e Entrega
+      </a>
+      <a href="/almoxarifado/confirmacoes-instalador" class="nav-link {% if '/almoxarifado/confirmacoes-instalador' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#9989;</span> Confirmacoes
+      </a>
+      <a href="/almoxarifado/carcacas" class="nav-link {% if '/almoxarifado/carcacas' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#9851;</span> Carcacas
+      </a>
+      <a href="/almoxarifado/transferencias" class="nav-link {% if '/almoxarifado/transferencias' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#8644;</span> Transferencias
+      </a>
+      {% endif %}
+
+      {% if usuario and usuario.role.value == 'admin' %}
+      <div class="nav-section-title">Administracao</div>
+      <a href="/admin/portal-instaladores" class="nav-link {% if '/admin/portal-instaladores' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128241;</span> Portal Instalador
+      </a>
+      <a href="/admin/instaladores" class="nav-link {% if '/admin/instaladores' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#9881;</span> Instaladores
+      </a>
+      <a href="/admin/usuarios" class="nav-link {% if '/admin/usuarios' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128101;</span> Usuarios
+      </a>
+      <a href="/admin/pecas" class="nav-link {% if '/admin/pecas' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#129520;</span> Tipos de Pecas
+      </a>
+      <a href="/admin/auditoria" class="nav-link {% if '/admin/auditoria' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128221;</span> Auditoria
+      </a>
+      <a href="/admin/monitoramento" class="nav-link {% if '/admin/monitoramento' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128737;</span> Monitoramento
+      </a>
+      <a href="/admin/usuarios-ativos" class="nav-link {% if '/admin/usuarios-ativos' in current_path %}active{% endif %}">
+        <span class="nav-icon">ON</span> Usuarios Ativos
+      </a>
+      <a href="/admin/diagnostico" class="nav-link {% if '/admin/diagnostico' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128269;</span> Diagnostico
+      </a>
+      <a href="/admin/regras-caixa" class="nav-link {% if '/admin/regras-caixa' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128230;</span> Regra de Caixa
+      </a>
+      <a href="/admin/reversoes" class="nav-link {% if '/admin/reversoes' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#8634;</span> Reversoes
+      </a>
+      <a href="/admin/feedbacks" class="nav-link {% if '/admin/feedbacks' in current_path %}active{% endif %}">
+        <span class="nav-icon">&#128172;</span> Feedbacks
+      </a>
+      <div class="nav-section-title">Relatorios</div>
+      <a href="/relatorios" class="nav-link {% if current_path == '/relatorios' or current_path.startswith('/relatorios/') %}active{% endif %}">
+        <span class="nav-icon">&#128202;</span> Relatorios
+      </a>
+      {% endif %}
+      {% endif %}
+    </div>
+
+    {% if usuario %}
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar">{{ usuario.nome[0].upper() }}</div>
+        <div>
+          <div class="user-name">{{ usuario.nome }}</div>
+          <div class="user-role">{{ usuario.role.value }}</div>
+        </div>
+      </div>
+      <div class="sidebar-footer-label">Conta</div>
+      <div class="sidebar-footer-actions">
+        <a href="/auth/trocar-senha" class="sidebar-footer-link account-link">&#128274; Trocar senha</a>
+        <a href="/termo-responsabilidade" class="sidebar-footer-link account-link">&#128196; Termo interno</a>
+        <form method="post" action="/auth/logout">
+          <button type="submit" class="sidebar-footer-link logout-link">&#128682; Sair do sistema</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </nav>
+
+  <div class="main-content">
+    {% set show_back = usuario and current_path not in ['/dashboard', '/auth/login'] and not current_path.startswith('/auth/login') %}
+    <div class="topbar">
+      <button id="menu-toggle" type="button" class="btn btn-secondary btn-sm">&#9776; Menu</button>
+      <div class="topbar-main">
+        {% if show_back %}
+        <a href="{{ safe_back_href(request, '/dashboard') }}" class="topbar-back" aria-label="Voltar" data-safe-nav="Existem alteracoes nao salvas nesta tela. Deseja sair mesmo assim?">
+          <span aria-hidden="true">&#8592;</span>
+        </a>
+        {% endif %}
+        <div class="topbar-stack">
+          <div class="topbar-kicker">{{ section_label }}</div>
+          <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        {% if usuario and is_admin(usuario) %}
+        {% set advanced_mode = can_use_advanced_mode(request, usuario) %}
+        <a href="/preferencias/modo-avancado?ativar={{ '0' if advanced_mode else '1' }}" class="btn btn-sm {{ 'btn-warning' if advanced_mode else 'btn-outline' }}">
+          &#9881; {{ 'Avancado ligado' if advanced_mode else 'Modo avancado' }}
+        </a>
+        {% endif %}
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </div>
+
+    <div class="content-area">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js?v={{ ASSET_VERSION }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

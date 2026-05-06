@@ -1,0 +1,81 @@
+{% extends "shared/base.html" %}
+{% block title %}Rastrear Hidrometro{% endblock %}
+{% block page_title %}Rastrear Hidrometro{% endblock %}
+
+{% block content %}
+{% if request.query_params.get("override") %}
+<div class="alert alert-info">Baixa administrativa registrada. O historico abaixo mostra o estado atualizado.</div>
+{% endif %}
+{% if request.query_params.get("reversao") %}
+<div class="alert alert-success">Baixa removida com sucesso. O hidrometro voltou para um contexto seguro de operacao.</div>
+{% endif %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<div style="max-width: 860px;">
+  <div class="card mb-3">
+    <div class="card-header"><div class="card-title">Buscar por numero de serie</div></div>
+    <div class="card-body">
+      <form method="post" action="/manipulador/rastrear/buscar" class="inline-form">
+        <input type="text" name="numero_serie" value="{{ numero_serie or (hidrometro.numero_serie if hidrometro else '') }}" placeholder="Numero de serie do hidrometro" required data-scanner-field="true" autocomplete="off" autocapitalize="characters" spellcheck="false" autofocus>
+        <button type="submit" class="btn btn-primary">Rastrear</button>
+      </form>
+    </div>
+  </div>
+
+  {% if hidrometro %}
+  {% set bundle = hidrometro_action_bundle(hidrometro, usuario, can_use_advanced_mode(request, usuario)) %}
+  {% set hidrometros_caixa = get_caixa_hidrometros(hidrometro.caixa) %}
+  <div class="card mb-3">
+    <div class="card-header">
+      <div class="card-title">Rastreamento de {{ hidrometro.numero_serie }}</div>
+      <span class="badge {% if hidrometro.status.value == 'em_estoque' %}badge-success{% elif hidrometro.status.value == 'com_instalador' %}badge-warning{% else %}badge-info{% endif %}">
+        {{ humanize_status(hidrometro.status) }}
+      </span>
+    </div>
+    <div class="card-body">
+      {% include "shared/partials/context_actions.html" %}
+
+      <div class="timeline mt-3">
+        <div class="timeline-item done">
+          <div class="timeline-title">Cadastro em caixa</div>
+          {% if hidrometro.caixa %}
+          <div class="timeline-text">Caixa {{ hidrometro.caixa.numero_interno }} / SN {{ hidrometro.caixa.serial_number }}</div>
+          {% else %}
+          <div class="timeline-text">Hidrometro solto no estoque do almoxarifado.</div>
+          {% endif %}
+          <div class="timeline-text">{{ hidrometro.criado_em|datetime_br_seconds }}</div>
+        </div>
+
+        <div class="timeline-item {{ 'done' if ultima_saida else '' }}">
+          <div class="timeline-title">Entrega ao instalador</div>
+          {% if ultima_saida %}
+          <div class="timeline-text">{{ ultima_saida.instalador.nome if ultima_saida.instalador else '-' }}</div>
+          <div class="timeline-text">{{ ultima_saida.criado_em|datetime_br_seconds }} por {{ ultima_saida.registrado_por.nome if ultima_saida.registrado_por else '-' }}</div>
+          {% else %}
+          <div class="timeline-text">Ainda nao houve saida registrada para esta caixa.</div>
+          {% endif %}
+        </div>
+
+        <div class="timeline-item {{ 'done' if hidrometro.status.value == 'instalado' else '' }}">
+          <div class="timeline-title">Instalacao em campo</div>
+          <div class="timeline-text">{{ hidrometro.instalado_em|datetime_br_seconds if hidrometro.instalado_em else 'Ainda nao instalado.' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if hidrometro.caixa %}
+  <div class="card">
+    <div class="card-header"><div class="card-title">Outros hidrometros da mesma caixa</div></div>
+    <div class="card-body">
+      <div class="chip-grid">
+        {% for h in hidrometros_caixa %}
+        <a href="/manipulador/rastrear?numero_serie={{ h.numero_serie }}" class="chip {{ 'chip-active' if h.id == hidrometro.id else '' }}">{{ h.numero_serie }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

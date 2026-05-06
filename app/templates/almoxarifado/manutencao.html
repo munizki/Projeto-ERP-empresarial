@@ -1,0 +1,218 @@
+{% extends "shared/base.html" %}
+{% block title %}Manutencao de Hidrometros{% endblock %}
+{% block page_title %}Manutencao de Hidrometros{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('aberta') %}<div class="alert alert-success">Manutencao aberta. O hidrometro saiu do fluxo operacional.</div>{% endif %}
+{% if request.query_params.get('enviado') %}<div class="alert alert-success">Envio para assistencia registrado.</div>{% endif %}
+{% if request.query_params.get('retorno') %}<div class="alert alert-success">Este hidrometro voltou ao estoque e esta disponivel para uso quando aprovado.</div>{% endif %}
+{% if request.query_params.get('retorno_caixa') %}<div class="alert alert-success">Este hidrometro voltou para a caixa de origem em estoque.</div>{% endif %}
+{% if request.query_params.get('descartado') %}<div class="alert alert-warning">Descarte tecnico registrado. O hidrometro nao podera ser reutilizado.</div>{% endif %}
+{% if request.query_params.get('prioridade_removida') %}<div class="alert alert-info">Prioridade removida com justificativa.</div>{% endif %}
+{% if request.query_params.get('erro') %}<div class="alert alert-danger">{{ request.query_params.get('erro') }}</div>{% endif %}
+
+<div class="maintenance-hero mb-4">
+  <div>
+    <span class="eyebrow">Almoxarifado</span>
+    <h2>Manutencao de hidrometros</h2>
+    <p>Controle de retirada, assistencia, retorno ao estoque e prioridade de reutilizacao.</p>
+  </div>
+  <div class="maintenance-hero-actions no-print">
+    <a href="/almoxarifado/caixas" class="btn btn-secondary btn-sm">Caixas</a>
+    <a href="/almoxarifado/caixas/nova" class="btn btn-primary btn-sm">Nova caixa</a>
+    <a href="/almoxarifado/manutencao/exportar.xlsx" class="btn btn-success btn-sm">XLSX</a>
+  </div>
+</div>
+
+<div class="maintenance-kpi-grid mb-4">
+  <div class="maintenance-kpi warning"><span>Em manutencao</span><strong>{{ resumo.em_manutencao }}</strong><small>Indisponiveis</small></div>
+  <div class="maintenance-kpi success"><span>Retornados</span><strong>{{ resumo.retornados }}</strong><small>Historico tecnico</small></div>
+  <div class="maintenance-kpi danger"><span>Descartados</span><strong>{{ resumo.descartados }}</strong><small>Nunca reutilizar</small></div>
+  <div class="maintenance-kpi info"><span>Prioridade</span><strong>{{ resumo.prioridade_reutilizacao }}</strong><small>Reutilizar primeiro</small></div>
+  <div class="maintenance-kpi warning"><span>Parados</span><strong>{{ resumo.parados_alerta }}</strong><small>{{ resumo.alerta_dias }}+ dias</small></div>
+  <div class="maintenance-kpi neutral"><span>Tempo medio</span><strong>{{ "%.1f"|format(resumo.tempo_medio_dias) if resumo.tempo_medio_dias is not none else "-" }}</strong><small>dias ate retorno</small></div>
+</div>
+
+{% if resumo.alertas_prioridade %}
+<section class="maintenance-panel mb-4">
+  <div class="maintenance-panel-head">
+    <div>
+      <span class="eyebrow">Prioridade vencida</span>
+      <h3>Hidrometros retornados da assistencia parados no estoque</h3>
+    </div>
+    <span class="badge badge-warning">{{ resumo.alertas_prioridade|length }} alerta(s)</span>
+  </div>
+  <div class="maintenance-priority-grid">
+    {% for alerta in resumo.alertas_prioridade %}
+    <div class="maintenance-priority-card {{ 'critical' if alerta.status == 'CRITICO' else '' }}">
+      <div>
+        <span class="mono">{{ alerta.numero_serie }}</span>
+        <strong>{{ alerta.dias_parado }} dias parado</strong>
+      </div>
+      <div class="text-muted">Retorno em {{ alerta.data_retorno|datetime_br }}</div>
+      <div class="maintenance-card-actions">
+        <span class="badge {{ 'badge-danger' if alerta.status == 'CRITICO' else 'badge-warning' }}">{{ alerta.status }}</span>
+        <a href="/almoxarifado/caixas/nova" class="btn btn-primary btn-sm">Usar em caixa</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if hidrometros_soltos %}
+<section class="maintenance-panel mb-4">
+  <div class="maintenance-panel-head">
+    <div>
+      <span class="eyebrow">Estoque solto</span>
+      <h3>Hidrometros disponiveis para nova caixa</h3>
+    </div>
+  </div>
+  <div class="maintenance-loose-list">
+    {% for h in hidrometros_soltos %}
+    <div class="maintenance-loose-item">
+      <div>
+        <strong class="mono">{{ h.numero_serie }}</strong>
+        {% if h.data_retorno_manutencao %}
+        <div class="text-muted">Retorno em {{ h.data_retorno_manutencao|datetime_br }}</div>
+        {% endif %}
+      </div>
+      {% if h.prioridade_reutilizacao %}
+      <span class="badge badge-warning">Retornou da assistencia - priorizar reutilizacao</span>
+      <form method="post" action="/almoxarifado/hidrometros/{{ h.id }}/prioridade/remover" class="maintenance-inline-form">
+        <input type="text" name="justificativa" placeholder="Justificativa" required>
+        <button type="submit" class="btn btn-outline btn-sm">Remover prioridade</button>
+      </form>
+      {% else %}
+      <span class="badge badge-success">Disponivel</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="maintenance-panel">
+  <div class="maintenance-panel-head">
+    <div>
+      <span class="eyebrow">Fluxo tecnico</span>
+      <h3>Historico e acoes</h3>
+    </div>
+  </div>
+
+  <div class="maintenance-board">
+    {% for item in manutencoes %}
+    {% set status = item.status %}
+    {% set manutencao_revertida = item.revertida %}
+    {% set pode_enviar = status == 'EM_MANUTENCAO' and not manutencao_revertida %}
+    {% set pode_retorno = status in ['EM_MANUTENCAO', 'ENVIADO_ASSISTENCIA'] and not manutencao_revertida %}
+    {% set pode_descartar = status in ['EM_MANUTENCAO', 'ENVIADO_ASSISTENCIA'] and usuario.role.value == 'admin' and not manutencao_revertida %}
+    {% set pode_voltar_caixa = caixa_origem_disponivel_para_retorno(item) %}
+    <article class="maintenance-card status-{{ status|lower }}">
+      <header class="maintenance-card-head">
+        <div>
+          <strong class="mono">{{ item.hidrometro.numero_serie if item.hidrometro else '-' }}</strong>
+          <div class="maintenance-card-subtitle">
+            Caixa origem: {{ item.caixa_origem.numero_interno if item.caixa_origem else '-' }}
+          </div>
+        </div>
+        <span class="badge badge-info">{{ status }}</span>
+      </header>
+
+      <div class="maintenance-card-grid">
+        <div>
+          <span>Motivo</span>
+          <strong>{{ item.motivo }}</strong>
+          <p>{{ item.descricao_problema }}</p>
+        </div>
+        <div>
+          <span>Datas</span>
+          <p>Abertura: {{ item.data_abertura|datetime_br }}</p>
+          <p>Envio: {{ item.data_envio|datetime_br if item.data_envio else '-' }}</p>
+          <p>Retorno: {{ item.data_retorno|datetime_br if item.data_retorno else '-' }}</p>
+        </div>
+        <div>
+          <span>Laudo / decisao</span>
+          <p>{{ item.laudo or '-' }}</p>
+          {% if item.decisao_final %}<span class="badge badge-secondary">{{ item.decisao_final }}</span>{% endif %}
+          {% if item.hidrometro and item.hidrometro.prioridade_reutilizacao %}
+          <span class="badge badge-warning">Priorizar reutilizacao</span>
+          {% endif %}
+          {% if item.revertida %}
+          <span class="badge badge-danger">Revertida pelo admin</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if pode_enviar or pode_retorno or pode_descartar %}
+      <div class="maintenance-actions">
+        {% if pode_enviar %}
+        <form method="post" action="/almoxarifado/manutencao/{{ item.id }}/enviar" class="maintenance-action-form compact">
+          <label>Enviar para assistencia</label>
+          <div class="maintenance-action-row">
+            <input type="text" name="fornecedor" placeholder="Assistencia tecnica" required>
+            <button type="submit" class="btn btn-warning btn-sm">Enviar</button>
+          </div>
+        </form>
+        {% endif %}
+
+        {% if pode_retorno %}
+        <form method="post" action="/almoxarifado/manutencao/{{ item.id }}/retorno" class="maintenance-action-form">
+          <label>Registrar retorno</label>
+          <textarea name="laudo" placeholder="Laudo tecnico" required></textarea>
+          <div class="maintenance-action-row">
+            <select name="decisao_final">
+              <option value="{{ DECISAO_VOLTAR_ESTOQUE }}">Voltar para estoque</option>
+              {% if pode_voltar_caixa %}
+              <option value="{{ DECISAO_VOLTAR_CAIXA_ORIGEM }}">Voltar para caixa de origem em estoque</option>
+              {% endif %}
+              <option value="{{ DECISAO_CONTINUAR_MANUTENCAO }}">Continuar em manutencao</option>
+              {% if usuario.role.value == 'admin' %}
+              <option value="{{ DECISAO_DESCARTAR }}">Descartar</option>
+              {% endif %}
+            </select>
+            <input type="text" name="observacao_prioridade" placeholder="Observacao da prioridade">
+            <button type="submit" class="btn btn-success btn-sm">Registrar</button>
+          </div>
+        </form>
+        {% if item.caixa_origem and not pode_voltar_caixa %}
+        <div class="maintenance-closed-state">
+          <span>Retorno para caixa bloqueado: a caixa de origem nao esta em estoque ou ja esta completa.</span>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {% if pode_descartar %}
+        <form method="post" action="/almoxarifado/manutencao/{{ item.id }}/descartar" class="maintenance-action-form compact danger">
+          <label>Descarte tecnico</label>
+          <div class="maintenance-action-row">
+            <input type="text" name="justificativa" placeholder="Justificativa tecnica" required>
+            <button type="submit" class="btn btn-danger btn-sm" data-confirm="Descartar definitivamente este hidrometro?">Descartar</button>
+          </div>
+        </form>
+        {% endif %}
+        {% if usuario.role.value == 'admin' %}
+        <div class="maintenance-closed-state">
+          <a href="/admin/manutencoes/{{ item.id }}/reverter?next_path=/almoxarifado/manutencao" class="btn btn-danger btn-sm">Reverter manutencao</a>
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="maintenance-closed-state">
+        {% if item.revertida %}
+        <span>Manutencao revertida pelo admin em {{ item.revertida_em|datetime_br_seconds if item.revertida_em else '-' }}</span>
+        {% else %}
+        <span>Fluxo encerrado para esta manutencao</span>
+        {% endif %}
+        {% if usuario.role.value == 'admin' and not item.revertida and status != 'DESCARTADO_TECNICO' %}
+        <a href="/admin/manutencoes/{{ item.id }}/reverter?next_path=/almoxarifado/manutencao" class="btn btn-danger btn-sm">Reverter manutencao</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </article>
+    {% else %}
+    <div class="empty-state">Nenhuma manutencao registrada.</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends "shared/base.html" %}
+{% block title %}Monitoramento{% endblock %}
+{% block page_title %}Monitoramento{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('erro_backup') %}
+<div class="alert alert-danger mb-4">Backup: {{ request.query_params.get('erro_backup') }}</div>
+{% endif %}
+{% if request.query_params.get('modo_leitura') %}
+<div class="alert alert-success mb-4">Modo leitura atualizado.</div>
+{% endif %}
+
+<div class="summary-grid mb-4">
+  <div class="summary-card"><span>Estoque critico</span><strong>{{ estoques_criticos|length }}</strong></div>
+  <div class="summary-card"><span>Caixas inconsistentes</span><strong>{{ caixas_inconsistentes|length }}</strong></div>
+  <div class="summary-card"><span>Em manutencao</span><strong>{{ resumo_manutencao.em_manutencao }}</strong></div>
+  <div class="summary-card"><span>Retornados parados</span><strong>{{ resumo_manutencao.parados_alerta }}</strong></div>
+  <div class="summary-card"><span>Solicitacoes pendentes</span><strong>{{ solicitacoes_pendentes }}</strong></div>
+  <div class="summary-card"><span>Usuarios online</span><strong>{{ usuarios_online }}</strong></div>
+  <div class="summary-card"><span>Backup</span><strong style="font-size:18px">{{ backup_status }}</strong></div>
+</div>
+
+<section class="dashboard-action-section mb-4">
+  <div class="section-head">
+    <div><h3>Alertas acionaveis</h3></div>
+    <a href="/admin/auditoria?severidade=CRITICO" class="btn btn-danger btn-sm">Criticos</a>
+  </div>
+  <div class="dashboard-action-grid dashboard-action-grid-compact">
+    {% for alerta in alertas_interativos %}
+    <a href="{{ alerta.href }}" class="dashboard-action-card {{ alerta.tom }}">
+      <div class="dashboard-action-emoji">{% if alerta.tom == 'red' %}&#9888;{% elif alerta.tom == 'amber' %}&#128993;{% else %}&#128202;{% endif %}</div>
+      <div class="dashboard-action-title">{{ alerta.valor }}</div>
+      <div class="dashboard-action-mini">{{ alerta.titulo }}</div>
+      <div class="dashboard-action-buttons"><span class="btn btn-ghost-light btn-sm">{{ alerta.detalhe }}</span></div>
+    </a>
+    {% else %}
+    <article class="dashboard-action-card green">
+      <div class="dashboard-action-emoji">&#9989;</div>
+      <div class="dashboard-action-title">OK</div>
+      <div class="dashboard-action-mini">Nenhum alerta operacional aberto</div>
+      <div class="dashboard-action-buttons"><span class="btn btn-ghost-light btn-sm">Monitorado</span></div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="dashboard-action-section mb-4">
+  <div class="section-head">
+    <div><h3>Checklist diario</h3></div>
+    <a href="/admin/diagnostico" class="btn btn-outline btn-sm">Diagnostico</a>
+  </div>
+  <div class="dashboard-action-grid dashboard-action-grid-compact">
+    {% for item in checklist_admin %}
+    <article class="dashboard-action-card {{ item.tom }}">
+      <div class="dashboard-action-emoji">{% if item.tom == 'green' %}&#9989;{% elif item.tom == 'red' %}&#9888;{% elif item.tom == 'amber' %}&#128993;{% else %}&#128202;{% endif %}</div>
+      <div class="dashboard-action-title">{{ item.valor }}</div>
+      <div class="dashboard-action-mini">{{ item.titulo }}</div>
+      <div class="dashboard-action-buttons"><span class="btn btn-ghost-light btn-sm">{{ item.detalhe }}</span></div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="dashboard-action-section mb-4">
+  <div class="dashboard-action-grid">
+    <article class="dashboard-action-card dark">
+      <div class="dashboard-action-emoji">&#128190;</div>
+      <div class="dashboard-action-title">Backup</div>
+      <div class="dashboard-action-buttons">
+        <form method="post" action="/admin/monitoramento/backup">
+          <button type="submit" class="btn btn-solid-light btn-sm" data-confirm="Gerar e baixar backup completo do banco agora?">Baixar banco</button>
+        </form>
+        <span class="btn btn-ghost-light btn-sm">
+          {% if backup_engine_status.pg_dump_disponivel %}pg_dump OK{% elif backup_engine_status.docker_fallback_configurado %}Docker fallback{% else %}Configurar pg_dump{% endif %}
+        </span>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card green">
+      <div class="dashboard-action-emoji">&#128994;</div>
+      <div class="dashboard-action-title">Saude</div>
+      <div class="dashboard-action-buttons">
+        <a href="/healthz" class="btn btn-solid-light btn-sm" target="_blank" rel="noopener">Verificar</a>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card slate">
+      <div class="dashboard-action-emoji">&#128193;</div>
+      <div class="dashboard-action-title">{{ backup_retention_days }} dias</div>
+      <div class="dashboard-action-buttons">
+        <span class="btn btn-ghost-light btn-sm">Retencao local</span>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card blue">
+      <div class="dashboard-action-emoji">&#128229;</div>
+      <div class="dashboard-action-title">Exportar</div>
+      <div class="dashboard-action-buttons">
+        <a href="/admin/exportacao-periodica.zip" class="btn btn-solid-light btn-sm" download>Pacote ZIP</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="card mb-4">
+  <div class="card-header">
+    <div class="card-title">Usuarios ativos</div>
+    <a href="/admin/usuarios-ativos" class="btn btn-outline btn-sm">Gerenciar sessoes</a>
+  </div>
+  <div class="card-body">
+    <div class="enterprise-card-grid">
+      {% for row in usuarios_sessao %}
+      <article class="enterprise-mini-card {{ 'urgent' if row.role != 'admin' and row.sessao_provavel else '' }}">
+        <div class="enterprise-mini-head">
+          <span class="badge {{ 'badge-success' if row.online else 'badge-warning' if row.sessao_provavel else 'badge-secondary' }}">
+            {{ 'Online' if row.online else 'Sessao provavel' if row.sessao_provavel else 'Inativo' }}
+          </span>
+          <span class="text-muted">{{ row.usuario.ultimo_acesso|datetime_br_seconds if row.usuario.ultimo_acesso else '-' }}</span>
+        </div>
+        <strong>{{ row.usuario.nome }}</strong>
+        <div class="text-muted">{{ row.ip or '-' }} | {{ row.browser or 'Navegador nao registrado' }}</div>
+      </article>
+      {% else %}
+      <div class="empty-state"><p>Nenhum usuario ativo registrado.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section-grid mb-4">
+  <div class="card" id="alertas-acesso">
+    <div class="card-header">
+      <div class="card-title">Modo leitura</div>
+      <span class="badge {{ 'badge-danger' if modo_leitura.ativo else 'badge-success' }}">{{ 'Ativo' if modo_leitura.ativo else 'Liberado' }}</span>
+    </div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        <article class="enterprise-mini-card {{ 'urgent' if modo_leitura.ativo else '' }}">
+          <div class="enterprise-mini-head">
+            <strong>{{ 'Operacao pausada' if modo_leitura.ativo else 'Operacao liberada' }}</strong>
+            <span class="badge {{ 'badge-warning' if modo_leitura.manual_ativo else 'badge-info' }}">{{ 'Manual' if modo_leitura.manual_ativo else 'Automatico' if modo_leitura.automatico_ativo else 'Normal' }}</span>
+          </div>
+          <p class="feedback-card-text">{{ modo_leitura.motivo or 'Sem bloqueio operacional.' }}</p>
+        </article>
+        <article class="enterprise-mini-card">
+          <form method="post" action="/admin/monitoramento/modo-leitura" class="monitor-form">
+            <input type="hidden" name="acao" value="{{ 'LIBERAR' if modo_leitura.manual_ativo else 'ATIVAR' }}">
+            <label>Motivo</label>
+            <input type="text" name="motivo" required placeholder="{{ 'Liberacao validada' if modo_leitura.manual_ativo else 'Falha critica ou manutencao' }}">
+            <label>Confirmacao</label>
+            <input type="text" name="confirmacao" required placeholder="{{ 'LIBERAR' if modo_leitura.manual_ativo else 'ATIVAR' }}">
+            <button type="submit" class="btn {{ 'btn-success' if modo_leitura.manual_ativo else 'btn-danger' }} btn-sm">
+              {{ 'Liberar operacao' if modo_leitura.manual_ativo else 'Ativar modo leitura' }}
+            </button>
+          </form>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Politica de backup</div></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        <article class="enterprise-mini-card">
+          <div class="enterprise-mini-head"><span class="badge {{ 'badge-success' if ultimo_backup else 'badge-warning' }}">Backup</span></div>
+          <strong>{{ 'OK' if ultimo_backup else 'Pendente' }}</strong>
+          <p class="feedback-card-text">{{ backup_status }}</p>
+        </article>
+        <article class="enterprise-mini-card">
+          <div class="enterprise-mini-head"><span class="badge {{ 'badge-success' if restore_status and restore_status.status == 'ok' else 'badge-warning' }}">Restore</span></div>
+          <strong>{{ 'OK' if restore_status and restore_status.status == 'ok' else 'Pendente' }}</strong>
+          <p class="feedback-card-text">{{ restore_status.validado_em if restore_status else 'Nao validado' }}</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Alertas de acesso</div><a href="/admin/auditoria?acao=LOGIN" class="btn btn-outline btn-sm">Abrir auditoria</a></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for log in login_alertas %}
+        <article class="enterprise-mini-card">
+          <div class="enterprise-mini-head">
+            <span class="badge badge-danger">{{ log.acao }}</span>
+            <span class="text-muted">{{ log.criado_em|datetime_br_seconds }}</span>
+          </div>
+          <div class="text-muted">{{ log.ip or '-' }}</div>
+          <p class="feedback-card-text">{{ log.descricao or '-' }}</p>
+          <a href="/admin/auditoria?acao={{ log.acao|urlencode }}" class="btn btn-outline btn-sm mt-2">Ver similares</a>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhum alerta recente.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="eventos-suspeitos">
+    <div class="card-header"><div class="card-title">Eventos suspeitos</div><a href="/admin/auditoria?severidade=SUSPEITO" class="btn btn-outline btn-sm">Abrir auditoria</a></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for log in eventos_suspeitos %}
+        <article class="enterprise-mini-card urgent">
+          <div class="enterprise-mini-head">
+            <span class="badge badge-warning">{{ log.acao }}</span>
+            <span class="text-muted">{{ log.criado_em|datetime_br_seconds }}</span>
+          </div>
+          <strong>{{ log.categoria }}</strong>
+          <p class="feedback-card-text">{{ log.descricao or '-' }}</p>
+          <a href="/admin/auditoria?severidade=SUSPEITO&acao={{ log.acao|urlencode }}" class="btn btn-outline btn-sm mt-2">Ver detalhes</a>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhum evento suspeito recente.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-grid mt-4">
+  <div class="card" id="acoes-criticas">
+    <div class="card-header"><div class="card-title">Acoes criticas</div><a href="/admin/auditoria?severidade=CRITICO" class="btn btn-danger btn-sm">Ver criticos</a></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for log in acoes_criticas %}
+        <article class="enterprise-mini-card">
+          <div class="enterprise-mini-head">
+            <span class="badge badge-danger">{{ log.acao }}</span>
+            <span class="text-muted">{{ log.criado_em|datetime_br_seconds }}</span>
+          </div>
+          <strong>{{ log.tabela or '-' }} #{{ log.registro_id or '-' }}</strong>
+          <p class="feedback-card-text">{{ log.descricao or '-' }}</p>
+          <a href="/admin/auditoria?severidade=CRITICO&acao={{ log.acao|urlencode }}" class="btn btn-outline btn-sm mt-2">Abrir evento</a>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhuma acao critica recente.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-grid mt-4">
+  <div class="card" id="caixas-inconsistentes">
+    <div class="card-header"><div class="card-title">Caixas inconsistentes</div></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for caixa in caixas_inconsistentes %}
+        <article class="enterprise-mini-card urgent">
+          <div class="enterprise-mini-head">
+            <span class="badge badge-danger">Revisar</span>
+            <span class="text-muted">#{{ caixa.id }}</span>
+          </div>
+          <strong>{{ caixa.numero_interno }}</strong>
+          <div class="text-muted">{{ get_caixa_hidrometros(caixa)|length }}/{{ quantidade_esperada_caixa(caixa) }} hidrometros</div>
+          <a href="/almoxarifado/caixas/{{ caixa.id }}" class="btn btn-sm btn-outline mt-2">Abrir</a>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhuma caixa inconsistente.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Regras recentes</div></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for regra in regras_recentes %}
+        <article class="enterprise-mini-card">
+          <div class="enterprise-mini-head">
+            <span class="badge {{ 'badge-success' if regra.ativo else 'badge-secondary' }}">{{ 'Ativa' if regra.ativo else 'Inativa' }}</span>
+            <span class="text-muted">{{ regra.vigente_desde|datetime_br }}</span>
+          </div>
+          <strong>{{ regra.quantidade_hidrometros }} hidrometros</strong>
+          <small class="text-muted">{{ regra.criado_por.nome if regra.criado_por else 'Sistema' }}</small>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhuma regra registrada.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

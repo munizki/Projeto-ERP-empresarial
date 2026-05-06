@@ -1,0 +1,107 @@
+{% extends "shared/base.html" %}
+{% block title %}Relatorio - Confirmacoes do Instalador{% endblock %}
+{% block page_title %}Confirmacoes do Instalador{% endblock %}
+
+{% block content %}
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Entregas confirmadas pelo instalador</h2>
+    <p>Relatorio de conferencias do portal mobile, incluindo pendencias e divergencias apontadas.</p>
+  </div>
+  <div class="page-intro-badge">{{ resumo.total }} entrega(s)</div>
+</div>
+
+<div class="executive-band mb-4">
+  <div class="executive-band-item"><span>Total</span><strong>{{ resumo.total }}</strong></div>
+  <div class="executive-band-item"><span>Pendente</span><strong>{{ resumo.pendente }}</strong></div>
+  <div class="executive-band-item"><span>Confirmado</span><strong>{{ resumo.confirmado }}</strong></div>
+  <div class="executive-band-item"><span>Diverg.</span><strong>{{ resumo.divergencia }}</strong></div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/relatorios" class="btn btn-outline btn-sm">Relatorios</a>
+  <a href="/almoxarifado/confirmacoes-instalador" class="btn btn-outline btn-sm">Aba do almoxarifado</a>
+  <a href="/relatorios/confirmacoes-instalador/exportar.xlsx?status_recebimento={{ filtros.status_recebimento }}&instalador_id={{ filtros.instalador_id }}&data_inicio={{ filtros.data_inicio }}&data_fim={{ filtros.data_fim }}" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+</div>
+
+<form method="get" action="/relatorios/confirmacoes-instalador" class="inline-form mb-3 no-print">
+  <div class="form-group">
+    <label>Status</label>
+    <select name="status_recebimento">
+      <option value="" {{ 'selected' if not filtros.status_recebimento }}>Todos</option>
+      <option value="pendente" {{ 'selected' if filtros.status_recebimento == 'pendente' }}>Pendente</option>
+      <option value="confirmado" {{ 'selected' if filtros.status_recebimento == 'confirmado' }}>Confirmado</option>
+      <option value="divergencia" {{ 'selected' if filtros.status_recebimento == 'divergencia' }}>Divergencia</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Instalador</label>
+    <select name="instalador_id">
+      <option value="0">Todos</option>
+      {% for instalador in instaladores %}
+      <option value="{{ instalador.id }}" {{ 'selected' if filtros.instalador_id == instalador.id }}>{{ instalador.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Entrega de</label>
+    <input type="date" name="data_inicio" value="{{ filtros.data_inicio }}">
+  </div>
+  <div class="form-group">
+    <label>Entrega ate</label>
+    <input type="date" name="data_fim" value="{{ filtros.data_fim }}">
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+</form>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Instalador</th>
+          <th>Status</th>
+          <th>Entregue em</th>
+          <th>Respondido em</th>
+          <th>Itens</th>
+          <th>Responsaveis</th>
+          <th>Motivo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in solicitacoes %}
+        {% set recebimento = s.recebimento_instalador_status or 'pendente' %}
+        {% set total_hidros = namespace(valor=0) %}
+        {% for item in s.itens_caixa %}
+          {% set total_hidros.valor = total_hidros.valor + (get_caixa_hidrometros(item.caixa)|length if item.caixa else 0) %}
+        {% endfor %}
+        <tr>
+          <td class="text-muted">#{{ s.id }}</td>
+          <td>
+            <strong>{{ s.instalador.nome if s.instalador else '-' }}</strong>
+            <div class="text-muted">{{ s.instalador.matricula if s.instalador else '-' }}</div>
+          </td>
+          <td>
+            {% if recebimento == 'confirmado' %}<span class="badge badge-success">Confirmado</span>
+            {% elif recebimento == 'divergencia' %}<span class="badge badge-danger">Divergencia</span>
+            {% else %}<span class="badge badge-warning">Pendente</span>{% endif %}
+          </td>
+          <td>{{ s.entregue_em|datetime_br if s.entregue_em else '-' }}</td>
+          <td>{{ s.confirmacao_instalador_em|datetime_br if s.confirmacao_instalador_em else '-' }}</td>
+          <td>{{ s.itens_caixa|length }} caixa(s), {{ total_hidros.valor }} hidrometro(s), {{ s.itens_peca|length }} tipo(s) de peca</td>
+          <td>
+            <div>Manipulador: {{ s.criado_por.nome if s.criado_por else '-' }}</div>
+            <div class="text-muted">Almoxarifado: {{ s.entregue_por.nome if s.entregue_por else '-' }}</div>
+          </td>
+          <td>{{ s.motivo_divergencia_instalador or '-' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-center text-muted" style="padding:30px">Nenhuma entrega encontrada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

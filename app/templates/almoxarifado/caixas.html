@@ -1,0 +1,120 @@
+{% extends "shared/base.html" %}
+{% block title %}Caixas{% endblock %}
+{% block page_title %}&#128230; Estoque de Caixas{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('sucesso') %}
+<div class="alert alert-success">Caixa cadastrada com sucesso.</div>
+{% endif %}
+{% if request.query_params.get('removida') == 'inativada' %}
+<div class="alert alert-info">Caixa arquivada com seguranca. O historico foi preservado.</div>
+{% endif %}
+{% if request.query_params.get('removida') == 'excluida' %}
+<div class="alert alert-success">Caixa excluida porque nao possuia historico operacional.</div>
+{% endif %}
+{% if request.query_params.get('limpeza') == 'caixa_excluida' %}
+<div class="alert alert-success">Caixa apagada definitivamente pela limpeza administrativa.</div>
+{% endif %}
+
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Caixas do sistema</h2>
+  </div>
+  <div class="page-intro-badge">{{ total_caixas_ativas }} ativa(s)</div>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card section-card section-almox">
+    <span>Ativas</span>
+    <strong>{{ total_caixas_ativas }}</strong>
+    <small>Fluxo operacional</small>
+  </div>
+  <div class="summary-card section-card section-neutral">
+    <span>Arquivadas</span>
+    <strong>{{ total_caixas_inativas }}</strong>
+    <small>Historico preservado</small>
+  </div>
+  <div class="summary-card section-card section-warning">
+    <span>Filtro</span>
+    <strong>{{ status_filtro.replace('_', ' ').title() if status_filtro else 'Todas' }}</strong>
+    <small>{{ 'Com arquivadas' if mostrar_inativas else 'Somente ativas' }}</small>
+  </div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/almoxarifado/solicitacoes" class="btn btn-warning btn-sm">Fila</a>
+  <a href="/almoxarifado/caixas/exportar.xlsx{% if status_filtro %}?status_filtro={{ status_filtro }}{% if mostrar_inativas %}&mostrar_inativas=1{% endif %}{% elif mostrar_inativas %}?mostrar_inativas=1{% endif %}" class="btn btn-success btn-sm">XLSX</a>
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+  <a href="/almoxarifado/caixas/nova" class="btn btn-primary btn-sm">Nova caixa</a>
+  <a href="/almoxarifado/caixas{% if mostrar_inativas %}?mostrar_inativas=1{% endif %}" class="btn btn-sm {{ 'btn-primary' if not status_filtro else 'btn-secondary' }}">Todas</a>
+  <a href="/almoxarifado/caixas?status_filtro=em_estoque{% if mostrar_inativas %}&mostrar_inativas=1{% endif %}" class="btn btn-sm {{ 'btn-success' if status_filtro == 'em_estoque' else 'btn-secondary' }}">Em estoque</a>
+  <a href="/almoxarifado/caixas?status_filtro=entregue{% if mostrar_inativas %}&mostrar_inativas=1{% endif %}" class="btn btn-sm {{ 'btn-warning' if status_filtro == 'entregue' else 'btn-secondary' }}">Entregues</a>
+  {% if is_admin(usuario) and can_use_advanced_mode(request, usuario) %}
+  <a href="/almoxarifado/caixas{% if status_filtro %}?status_filtro={{ status_filtro }}{% if not mostrar_inativas %}&mostrar_inativas=1{% endif %}{% else %}?mostrar_inativas={{ '0' if mostrar_inativas else '1' }}{% endif %}" class="btn btn-sm btn-outline">
+    {{ 'Ocultar arquivadas' if mostrar_inativas else 'Mostrar arquivadas' }}
+  </a>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Numero interno</th>
+          <th>Serial</th>
+          <th>Hidrometros</th>
+          <th>Status</th>
+          <th>Instalador</th>
+          <th>Cadastro</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in caixas %}
+        {% set bundle = caixa_action_bundle(c, usuario, can_use_advanced_mode(request, usuario)) %}
+        {% set hidrometros_caixa = get_caixa_hidrometros(c) %}
+        <tr class="{{ 'row-inactive' if not c.ativo else '' }}">
+          <td>
+            <strong>{{ c.numero_interno }}</strong>
+            {% if not c.ativo %}
+            <div class="text-muted">Arquivada</div>
+            {% endif %}
+          </td>
+          <td class="mono">{{ c.serial_number }}</td>
+          <td>
+            <span class="badge {{ 'badge-success' if hidrometros_caixa|length == quantidade_esperada_caixa(c) else 'badge-warning' }}">
+              {{ hidrometros_caixa|length }}/{{ quantidade_esperada_caixa(c) }}
+            </span>
+            {% if hidrometros_caixa|length < quantidade_esperada_caixa(c) %}
+            <div class="text-muted">Incompleta rastreada</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if c.status.value == 'em_estoque' %}<span class="badge badge-success">Em estoque</span>
+            {% elif c.status.value == 'entregue' %}<span class="badge badge-warning">Entregue</span>
+            {% else %}<span class="badge badge-secondary">{{ humanize_status(c.status) }}</span>{% endif %}
+          </td>
+          <td>{{ c.instalador.nome if c.instalador else '-' }}</td>
+          <td class="text-muted">{{ c.criado_em|datetime_br }}</td>
+          <td>
+            <div class="table-actions">
+              {% if bundle.primary %}
+                {% set action = bundle.primary[0] %}
+                <a href="{{ action.href }}" class="btn btn-sm btn-{{ action.tone }}">{{ action.label }}</a>
+              {% endif %}
+              <a href="/almoxarifado/caixas/{{ c.id }}" class="btn btn-sm btn-outline">Detalhe</a>
+            </div>
+            <div class="action-helper">{{ bundle.summary }}</div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center text-muted" style="padding: 28px;">Nenhuma caixa encontrada.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

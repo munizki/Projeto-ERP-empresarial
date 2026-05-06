@@ -1,0 +1,120 @@
+{% extends "shared/base.html" %}
+{% block title %}Usuarios Ativos{% endblock %}
+{% block page_title %}Usuarios Ativos{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('desconectado') %}
+<div class="alert alert-success">Usuario desconectado. A sessao aberta sera invalidada no proximo clique ou atualizacao.</div>
+{% endif %}
+{% if request.query_params.get('desconectados') %}
+<div class="alert alert-success">{{ request.query_params.get('desconectados') }} usuario(s) operacional(is) desconectado(s).</div>
+{% endif %}
+
+<section class="executive-hero executive-hero-auditoria mb-4">
+  <div class="executive-hero-main">
+    <span class="executive-kicker">Admin control</span>
+    <h2>Usuarios ativos no sistema</h2>
+    <div class="executive-chip-row">
+      <span class="executive-chip">Online = 5 min</span>
+      <span class="executive-chip">Sessao operacional = {{ idle_timeout_minutes }} min</span>
+      <span class="executive-chip">Desconexao auditada</span>
+    </div>
+  </div>
+  <div class="executive-hero-metrics">
+    <div class="executive-metric-card"><span>Online agora</span><strong>{{ kpis.online }}</strong></div>
+    <div class="executive-metric-card"><span>Sessoes provaveis</span><strong>{{ kpis.sessao_provavel }}</strong></div>
+    <div class="executive-metric-card"><span>Operacionais</span><strong>{{ kpis.operacionais }}</strong></div>
+    <div class="executive-metric-card"><span>Inativos</span><strong>{{ kpis.inativos }}</strong></div>
+  </div>
+</section>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <div class="card-title">Manutencao programada</div>
+    <span class="badge badge-danger">Admin</span>
+  </div>
+  <div class="card-body">
+    <form method="post" action="/admin/usuarios-ativos/desconectar-operacionais" class="form-grid">
+      <div class="form-group">
+        <label>Justificativa</label>
+        <input type="text" name="justificativa" required placeholder="Ex: manutencao programada as 18h">
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-danger" data-confirm="Desconectar todos os usuarios operacionais ativos? Eles receberao o aviso de manutencao ao tentar continuar.">Desconectar operacionais ativos</button>
+        <a href="/admin/monitoramento" class="btn btn-secondary">Monitoramento</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><div class="card-title">Sessoes e atividade recente</div></div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Status</th>
+          <th>Ultimo acesso</th>
+          <th>Origem</th>
+          <th>Ultima acao</th>
+          <th>Desconectar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in usuarios_sessao %}
+        {% set u = row.usuario %}
+        <tr>
+          <td>
+            <strong>{{ u.nome }}</strong>
+            <div class="text-muted">{{ u.email }}</div>
+            <span class="badge badge-secondary">{{ row.role }}</span>
+          </td>
+          <td>
+            {% if row.online %}
+            <span class="badge badge-success">Online agora</span>
+            {% elif row.sessao_provavel %}
+            <span class="badge badge-warning">Sessao provavel</span>
+            {% else %}
+            <span class="badge badge-secondary">Inativo</span>
+            {% endif %}
+            <div class="text-muted">
+              {% if row.idle_minutes is not none %}
+              {{ row.idle_minutes }} min sem atividade registrada
+              {% else %}
+              Nunca acessou
+              {% endif %}
+            </div>
+          </td>
+          <td>{{ u.ultimo_acesso|datetime_br_seconds if u.ultimo_acesso else "-" }}</td>
+          <td>
+            <div>{{ row.ip or "-" }}</div>
+            <div class="text-muted">{{ row.browser or "Navegador nao registrado" }}</div>
+          </td>
+          <td>
+            {% if row.last_log %}
+            <a href="/admin/auditoria?usuario_filtro={{ u.email|urlencode }}" class="btn btn-outline btn-sm">{{ row.last_log.acao }}</a>
+            <div class="text-muted">{{ row.last_log.criado_em|datetime_br_seconds }}</div>
+            {% else %}
+            -
+            {% endif %}
+          </td>
+          <td>
+            {% if row.pode_desconectar %}
+            <form method="post" action="/admin/usuarios/{{ u.id }}/desconectar" class="inline-form">
+              <input type="text" name="justificativa" required placeholder="Motivo">
+              <button type="submit" class="btn btn-danger btn-sm" data-confirm="Desconectar {{ u.nome }}? O usuario recebera o aviso de manutencao ao tentar continuar.">Desconectar</button>
+            </form>
+            {% else %}
+            <span class="text-muted">Admin preservado</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted" style="padding:24px;">Nenhum usuario encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

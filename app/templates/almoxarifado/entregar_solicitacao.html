@@ -1,0 +1,158 @@
+{% extends "shared/base.html" %}
+{% block title %}Entregar Solicitacao #{{ solicitacao.id }}{% endblock %}
+{% block page_title %}Entrega da Solicitacao #{{ solicitacao.id }}{% endblock %}
+
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+{% if pecas_insuficientes %}
+<div class="alert alert-warning">
+  Nao e possivel concluir a entrega porque falta estoque para:
+  {% for item in pecas_insuficientes %}
+    <strong>{{ item }}</strong>{% if not loop.last %} | {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="page-intro mb-4">
+  <div>
+    <h2>Conferencia final obrigatoria</h2>
+    <p>Digite novamente o numero interno e o serial de cada caixa. A entrega so sera gravada se a conferencia estiver exata.</p>
+  </div>
+  <div class="page-intro-badge">{{ solicitacao.instalador.nome }}</div>
+</div>
+
+<div class="wizard-steps">
+  <div class="wizard-step"><strong>1</strong><div><span>Separacao</span><b>Ja validada</b></div></div>
+  <div class="wizard-step"><strong>2</strong><div><span>Conferencia</span><b>Caixa e serial</b></div></div>
+  <div class="wizard-step"><strong>3</strong><div><span>Entrega</span><b>Instalador correto</b></div></div>
+</div>
+
+{% set total_hidros = namespace(valor=0) %}
+{% for item in solicitacao.itens_caixa %}
+  {% set total_hidros.valor = total_hidros.valor + (get_caixa_hidrometros(item.caixa)|length if item.caixa else 0) %}
+{% endfor %}
+
+<div class="summary-grid mb-3">
+  <div class="summary-card">
+    <span>Instalador</span>
+    <strong>{{ solicitacao.instalador.nome }}</strong>
+    <small>{{ solicitacao.instalador.matricula }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Caixas</span>
+    <strong>{{ solicitacao.itens_caixa|length }}</strong>
+    <small>{{ total_hidros.valor }} hidrometros</small>
+  </div>
+  <div class="summary-card">
+    <span>Pecas</span>
+    <strong>{{ solicitacao.itens_peca|length }}</strong>
+    <small>Itens variaveis</small>
+  </div>
+</div>
+
+<form method="post" action="/almoxarifado/solicitacoes/{{ solicitacao.id }}/entregar" data-dirty-check="true">
+  <div class="card mb-3">
+    <div class="card-header">
+      <div class="card-title">Conferencia caixa por caixa</div>
+    </div>
+    <div class="card-body stack">
+      {% for item in solicitacao.itens_caixa %}
+      <div class="confirmation-block">
+        <div class="confirmation-head">
+          <div>
+            <strong>Caixa {{ loop.index }}: {{ item.caixa.numero_interno }}</strong>
+            <div class="text-muted">Serial {{ item.caixa.serial_number }}</div>
+          </div>
+          <span class="badge badge-info">{{ get_caixa_hidrometros(item.caixa)|length }}/{{ quantidade_esperada_caixa(item.caixa) }} hidrometros</span>
+        </div>
+        {% if get_caixa_hidrometros(item.caixa)|length < quantidade_esperada_caixa(item.caixa) %}
+        <div class="alert alert-warning">Caixa incompleta rastreada. A entrega continua permitida.</div>
+        {% endif %}
+
+        <div class="chip-grid mb-3">
+          {% for h in get_caixa_hidrometros(item.caixa) %}
+          <span class="chip">{{ h.numero_serie }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group mb-0">
+            <label>Digite o numero interno para confirmar</label>
+            <input
+              type="text"
+              name="confirm_numero_{{ item.id }}"
+              data-expected="{{ item.caixa.numero_interno }}"
+              class="confirm-match"
+              placeholder="{{ item.caixa.numero_interno }}"
+              required
+            >
+          </div>
+          <div class="form-group mb-0">
+            <label>Digite o serial da caixa para confirmar</label>
+            <input
+              type="text"
+              name="confirm_serial_{{ item.id }}"
+              data-expected="{{ item.caixa.serial_number }}"
+              class="confirm-match"
+              placeholder="{{ item.caixa.serial_number }}"
+              required
+            >
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if solicitacao.itens_peca %}
+  <div class="card mb-3">
+    <div class="card-header">
+      <div class="card-title">Pecas que serao entregues</div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Peca</th>
+            <th>Quantidade</th>
+            <th>Unidade</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in solicitacao.itens_peca %}
+          <tr>
+            <td><strong>{{ item.tipo_peca.nome }}</strong></td>
+            <td>{{ item.quantidade_solicitada }}</td>
+            <td>{{ item.tipo_peca.unidade_medida }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <label class="checkbox-row context-confirm">
+        <input type="checkbox" name="confirmacao_contexto" value="1" required>
+        <span>Confirmo a entrega de {{ total_hidros.valor }} hidrometro(s), {{ solicitacao.itens_caixa|length }} caixa(s) e {{ solicitacao.itens_peca|length }} tipo(s) de peca para {{ solicitacao.instalador.nome }}.</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="form-group mb-0">
+        <label>Observacoes da entrega</label>
+        <textarea name="observacoes" placeholder="Ex: retirada conferida com o instalador, assinatura coletada, observacao de campo..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-success btn-lg" id="btn-entrega" {{ 'disabled' if pecas_insuficientes else '' }}>Confirmar entrega</button>
+    <a href="/almoxarifado/solicitacoes" class="btn btn-secondary btn-lg" data-safe-nav="Existem alteracoes nao salvas nesta entrega. Deseja voltar para a fila do almoxarifado?">Voltar para fila</a>
+  </div>
+</form>
+{% endblock %}

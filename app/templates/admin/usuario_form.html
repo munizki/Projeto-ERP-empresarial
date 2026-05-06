@@ -1,0 +1,100 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ 'Editar' if editando else 'Novo' }} Usuario{% endblock %}
+{% block page_title %}{{ 'Editar' if editando else 'Novo' }} Usuario{% endblock %}
+{% block content %}
+{% set role_value = form_data.get('role', editando.role.value if editando else 'manipulador') %}
+{% set instalador_vinculado = editando.instalador if editando and editando.instalador else none %}
+<div class="page-intro mb-4">
+  <div>
+    <h2>Controle de acesso sem excesso</h2>
+    <p>Crie perfis com o papel correto para reduzir erro operacional no uso diario do sistema.</p>
+  </div>
+  <div class="page-intro-badge">Usuarios</div>
+</div>
+
+<div style="max-width:560px">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Dados do usuario</div>
+    </div>
+    <div class="card-body">
+      {% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+      <form method="post" action="{{ '/admin/usuarios/' + editando.id|string + '/editar' if editando else '/admin/usuarios/novo' }}" data-dirty-check="true">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nome completo *</label>
+            <input type="text" name="nome" value="{{ form_data.get('nome', editando.nome if editando else '') }}" required>
+          </div>
+          <div class="form-group">
+            <label>E-mail *</label>
+            <input type="email" name="email" value="{{ form_data.get('email', editando.email if editando else '') }}" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Matricula</label>
+          <input type="text" name="matricula" id="usuario-matricula" value="{{ form_data.get('matricula', instalador_vinculado.matricula if instalador_vinculado else editando.matricula if editando else '') }}" autocomplete="off" placeholder="Numero interno da empresa">
+          <small class="text-muted">Obrigatoria para perfil instalador; opcional para os demais perfis.</small>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Perfil de acesso *</label>
+            <select name="role" id="usuario-role" required>
+              <option value="admin" {{ 'selected' if role_value == 'admin' }}>Admin</option>
+              <option value="almoxarifado" {{ 'selected' if role_value == 'almoxarifado' }}>Almoxarifado</option>
+              <option value="manipulador" {{ 'selected' if role_value == 'manipulador' }}>Manipulador</option>
+              <option value="instalador" {{ 'selected' if role_value == 'instalador' }}>Instalador</option>
+            </select>
+          </div>
+          {% if editando %}
+          <div class="form-group">
+            <label>Status</label>
+            <select name="ativo">
+              <option value="1" {{ 'selected' if editando.ativo }}>Ativo</option>
+              <option value="0" {{ 'selected' if not editando.ativo }}>Inativo</option>
+            </select>
+          </div>
+          {% endif %}
+        </div>
+        <div class="installer-link-fields" id="installer-link-fields" hidden>
+          <div class="alert alert-info">O usuario instalador sera vinculado ao cadastro operacional usado em solicitacoes, entregas, carcacas e produtividade pela matricula.</div>
+          <div class="form-group">
+            <label>CPF do instalador (opcional)</label>
+            <input type="text" name="cpf" id="installer-cpf" value="{{ form_data.get('cpf', instalador_vinculado.cpf if instalador_vinculado else '') }}" inputmode="numeric" autocomplete="off" maxlength="14">
+            <small class="text-muted">Use somente quando houver necessidade administrativa definida.</small>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>{{ 'Nova senha (deixe em branco para manter)' if editando else 'Senha *' }}</label>
+          <input type="password" name="{{ 'nova_senha' if editando else 'senha' }}" {{ '' if editando else 'required' }} minlength="12" placeholder="Minimo de 12 caracteres">
+        </div>
+        <hr class="divider">
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">{{ 'Salvar alteracoes' if editando else 'Criar usuario' }}</button>
+          <a href="/admin/usuarios" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas no cadastro do usuario. Deseja voltar para a lista?">Voltar para usuarios</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    const roleSelect = document.getElementById('usuario-role');
+    const fields = document.getElementById('installer-link-fields');
+    const cpf = document.getElementById('installer-cpf');
+    const matricula = document.getElementById('usuario-matricula');
+    if (!roleSelect || !fields || !cpf || !matricula) return;
+
+    function syncInstallerFields() {
+      const isInstaller = roleSelect.value === 'instalador';
+      fields.hidden = !isInstaller;
+      cpf.required = false;
+      matricula.required = isInstaller;
+    }
+
+    roleSelect.addEventListener('change', syncInstallerFields);
+    syncInstallerFields();
+  })();
+</script>
+{% endblock %}

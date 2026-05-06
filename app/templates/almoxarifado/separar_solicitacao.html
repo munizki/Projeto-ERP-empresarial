@@ -1,0 +1,107 @@
+{% extends "shared/base.html" %}
+{% block title %}Separar Solicitacao #{{ solicitacao.id }}{% endblock %}
+{% block page_title %}Separacao da Solicitacao #{{ solicitacao.id }}{% endblock %}
+
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+{% if pecas_insuficientes %}
+<div class="alert alert-warning">
+  Estoque insuficiente para concluir esta separacao:
+  {% for item in pecas_insuficientes %}
+    <strong>{{ item }}</strong>{% if not loop.last %} | {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="page-intro mb-4">
+  <div>
+    <h2>Selecione as caixas fisicas da entrega</h2>
+    <p>Somente caixas em estoque e nao reservadas aparecem aqui. Cada item precisa receber uma caixa unica.</p>
+  </div>
+  <div class="page-intro-badge">{{ solicitacao.itens_caixa|length }} caixa(s)</div>
+</div>
+
+<div class="wizard-steps">
+  <div class="wizard-step"><strong>1</strong><div><span>Status</span><b>Solicitacao valida</b></div></div>
+  <div class="wizard-step"><strong>2</strong><div><span>Estoque</span><b>Caixas disponiveis</b></div></div>
+  <div class="wizard-step"><strong>3</strong><div><span>Acao</span><b>Separar com trava</b></div></div>
+</div>
+
+<form method="post" action="/almoxarifado/solicitacoes/{{ solicitacao.id }}/separar" data-dirty-check="true">
+  <div class="section-grid">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Caixas solicitadas</div>
+      </div>
+      <div class="card-body stack">
+        {% for item in solicitacao.itens_caixa %}
+        <div class="selection-card">
+          <div class="selection-card-head">
+            <strong>Item {{ loop.index }}</strong>
+            <span class="badge badge-secondary">1 caixa</span>
+          </div>
+          <div class="form-group mb-0">
+            <label>Caixa disponivel</label>
+            <select name="item_caixa_{{ item.id }}" required>
+              <option value="">Selecione uma caixa</option>
+              {% for c in caixas_disponiveis %}
+              <option value="{{ c.id }}" {{ 'selected' if item.caixa_id == c.id else '' }}>
+                {{ c.numero_interno }} | SN {{ c.serial_number }} | {{ get_caixa_hidrometros(c)|length }}/{{ quantidade_esperada_caixa(c) }} hidrometros{% if get_caixa_hidrometros(c)|length < quantidade_esperada_caixa(c) %} | INCOMPLETA{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <p>Esta solicitacao nao possui caixas.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Resumo da solicitacao</div>
+      </div>
+      <div class="card-body">
+        <div class="summary-list">
+          <div><span>Instalador</span><strong>{{ solicitacao.instalador.nome }}</strong></div>
+          <div><span>Matricula</span><strong>{{ solicitacao.instalador.matricula }}</strong></div>
+          <div><span>Caixas</span><strong>{{ solicitacao.itens_caixa|length }}</strong></div>
+          <div><span>Pecas</span><strong>{{ solicitacao.itens_peca|length }}</strong></div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="detail-label">Pecas solicitadas</div>
+        {% if solicitacao.itens_peca %}
+        <div class="stack-sm">
+          {% for item in solicitacao.itens_peca %}
+          <div class="inline-pill-row">
+            <span>{{ item.tipo_peca.nome }}</span>
+            <span class="badge {{ 'badge-danger' if item.tipo_peca.estoque and item.quantidade_solicitada > item.tipo_peca.estoque.quantidade_atual else 'badge-info' }}">
+              {{ item.quantidade_solicitada }} {{ item.tipo_peca.unidade_medida }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted">Nenhuma peca nesta solicitacao.</p>
+        {% endif %}
+
+        <hr class="divider">
+        <label class="checkbox-row context-confirm">
+          <input type="checkbox" name="confirmacao_contexto" value="1" required>
+          <span>Confirmo que estou separando {{ solicitacao.itens_caixa|length }} caixa(s) para {{ solicitacao.instalador.nome }}.</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions mt-3">
+    <button type="submit" class="btn btn-warning" {{ 'disabled' if pecas_insuficientes else '' }}>Confirmar separacao</button>
+    <a href="/almoxarifado/solicitacoes" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas nesta separacao. Deseja voltar para a fila do almoxarifado?">Voltar para fila</a>
+  </div>
+</form>
+{% endblock %}

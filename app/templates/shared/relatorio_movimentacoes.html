@@ -1,0 +1,64 @@
+{% extends "shared/base.html" %}
+{% block title %}Relatorio - Movimentacoes{% endblock %}
+{% block page_title %}&#128220; Movimentacoes{% endblock %}
+
+{% block content %}
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Historico de movimentacoes</h2>
+    <p>Leitura cronologica das ultimas operacoes com foco em rastreabilidade e auditoria.</p>
+  </div>
+  <div class="page-intro-badge">{{ movimentacoes|length }} registro(s)</div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Ultimas {{ movimentacoes|length }} movimentacoes</div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Tipo</th><th>Caixa</th><th>Instalador</th><th>Responsavel</th><th>Observacoes</th><th>Data</th><th>Acao</th></tr>
+      </thead>
+      <tbody>
+        {% for m in movimentacoes %}
+        <tr>
+          <td>
+            {% if m.tipo.value == 'saida' %}<span class="badge badge-warning">Saida</span>
+            {% elif m.tipo.value == 'entrada' %}<span class="badge badge-success">Entrada</span>
+            {% elif m.tipo.value == 'baixa' %}<span class="badge badge-info">Baixa</span>
+            {% elif m.tipo.value == 'devolucao' %}<span class="badge badge-secondary">Devolucao</span>
+            {% else %}<span class="badge badge-secondary">{{ m.tipo.value }}</span>{% endif %}
+          </td>
+          <td>
+            {% if m.caixa %}
+            <strong>{{ m.caixa.numero_interno }}</strong>
+            <div class="text-muted">{{ m.caixa.serial_number }}</div>
+            {% else %}-{% endif %}
+          </td>
+          <td>{{ m.instalador.nome if m.instalador else '-' }}</td>
+          <td>{{ m.registrado_por.nome if m.registrado_por else '-' }}</td>
+          <td class="text-muted">{{ m.observacoes or '-' }}</td>
+          <td class="text-muted">{{ m.criado_em|datetime_br }}</td>
+          <td>
+            {% if m.tipo.value == 'baixa' and m.hidrometro_id %}
+            <a href="/admin/movimentacoes/material/{{ m.id }}/reverter?next_path=/relatorios/movimentacoes" class="btn btn-danger btn-sm">Reverter</a>
+            {% elif m.tipo.value == 'saida' and m.solicitacao_id %}
+            <a href="/admin/movimentacoes/material/{{ m.id }}/reverter?next_path=/relatorios/movimentacoes" class="btn btn-danger btn-sm">Reverter</a>
+            {% else %}
+            <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted" style="padding:32px">Nenhuma movimentacao registrada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "shared/base.html" %}
+{% block title %}Caixa {{ caixa.numero_interno }}{% endblock %}
+{% block page_title %}Caixa {{ caixa.numero_interno }}{% endblock %}
+
+{% block content %}
+{% set caixa_bundle = caixa_action_bundle(caixa, usuario, can_use_advanced_mode(request, usuario)) %}
+{% set hidrometros_caixa = get_caixa_hidrometros(caixa) %}
+{% set caixa_incompleta = hidrometros_caixa|length < quantidade_esperada_caixa(caixa) %}
+{% if request.query_params.get('erro_operacao') %}<div class="alert alert-danger mb-3">{{ request.query_params.get('erro_operacao') }}</div>{% endif %}
+{% if request.query_params.get('edicao') %}<div class="alert alert-success mb-3">Identificacao da caixa atualizada com sucesso.</div>{% endif %}
+{% if not caixa.ativo %}<div class="alert alert-info mb-3">Esta caixa esta arquivada. O historico continua preservado para consulta.</div>{% endif %}
+{% if caixa_incompleta %}
+<div class="alert alert-warning mb-3">
+  Caixa incompleta por manutencao: {{ hidrometros_caixa|length }}/{{ quantidade_esperada_caixa(caixa) }} hidrometro(s).
+  Ela continua liberada para o fluxo operacional com rastreabilidade.
+</div>
+{% endif %}
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/almoxarifado/caixas" class="btn btn-secondary btn-sm">Voltar</a>
+  {% if caixa.status.value == 'em_estoque' and not caixa.movimentacoes %}
+  <a href="/almoxarifado/caixas/{{ caixa.id }}/editar" class="btn btn-outline btn-sm">Editar identificacao</a>
+  {% endif %}
+  {% if is_admin(usuario) and can_use_advanced_mode(request, usuario) %}
+  <a href="/admin/limpeza/caixas/{{ caixa.id }}?next=/almoxarifado/caixas" class="btn btn-danger btn-sm">Excluir admin</a>
+  {% endif %}
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card">
+    <span>Numero interno</span>
+    <strong>{{ caixa.numero_interno }}</strong>
+    <small>Controle operacional</small>
+  </div>
+  <div class="summary-card">
+    <span>Serial</span>
+    <strong class="mono">{{ caixa.serial_number }}</strong>
+    <small>Identificacao de fabrica</small>
+  </div>
+  <div class="summary-card">
+    <span>Status</span>
+    <strong>{{ humanize_status(caixa.status) }}</strong>
+    <small>{{ caixa.instalador.nome if caixa.instalador else "Sem instalador" }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Hidrometros</span>
+    <strong>{{ hidrometros_caixa|length }}</strong>
+    <small>{{ hidrometros_caixa|length }}/{{ quantidade_esperada_caixa(caixa) }} hidrometro(s)</small>
+  </div>
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Acoes contextuais</div>
+    </div>
+    <div class="card-body">
+      {% set bundle = caixa_bundle %}
+      {% include "shared/partials/context_actions.html" %}
+      {% if is_admin(usuario) and can_use_advanced_mode(request, usuario) and caixa.ativo %}
+      <form method="post" action="/almoxarifado/caixas/{{ caixa.id }}/remover" class="mt-3 no-print">
+        <button type="submit" class="btn btn-warning" data-confirm="Arquivar esta caixa com seguranca? Se houver historico, ela sera preservada fora do fluxo operacional.">Arquivar com seguranca</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Dados da caixa</div>
+    </div>
+    <div class="card-body">
+      <div class="summary-list">
+        <div><span>Numero interno</span><strong>{{ caixa.numero_interno }}</strong></div>
+        <div><span>Serial</span><strong class="mono">{{ caixa.serial_number }}</strong></div>
+        <div><span>Status</span><strong>{{ humanize_status(caixa.status) }}</strong></div>
+        <div><span>Regra da caixa</span><strong>{{ quantidade_esperada_caixa(caixa) }} hidrometro(s)</strong></div>
+        <div><span>Instalador</span><strong>{{ caixa.instalador.nome if caixa.instalador else "-" }}</strong></div>
+        <div><span>Cadastro</span><strong>{{ caixa.criado_em|datetime_br }}</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Hidrometros vinculados</div>
+    </div>
+    <div class="card-body stack">
+      {% for h in hidrometros_caixa %}
+      {% set bundle = hidrometro_action_bundle(h, usuario, can_use_advanced_mode(request, usuario)) %}
+      <div class="item-context-card">
+        <div class="inline-pill-row">
+          <span class="mono">{{ h.numero_serie }}</span>
+          <span class="badge {% if h.status.value == 'em_estoque' %}badge-success{% elif h.status.value == 'com_instalador' %}badge-warning{% else %}badge-info{% endif %}">
+            {{ humanize_status(h.status) }}
+          </span>
+          {% if h.prioridade_reutilizacao %}
+          <span class="badge badge-warning">Retornou da assistencia - priorizar reutilizacao</span>
+          {% endif %}
+        </div>
+        {% include "shared/partials/context_actions.html" %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if removidos_manutencao %}
+<div class="card mt-3">
+  <div class="card-header"><div class="card-title">Hidrometros removidos para manutencao</div></div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Serie</th><th>Status</th><th>Motivo</th><th>Abertura</th><th>Laudo</th></tr></thead>
+      <tbody>
+        {% for item in removidos_manutencao %}
+        <tr>
+          <td class="mono">{{ item.hidrometro.numero_serie if item.hidrometro else '-' }}</td>
+          <td><span class="badge badge-warning">{{ item.status }}</span></td>
+          <td>{{ item.motivo }}<div class="text-muted">{{ item.descricao_problema }}</div></td>
+          <td>{{ item.data_abertura|datetime_br }}</td>
+          <td>{{ item.laudo or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if caixa.movimentacoes %}
+<div class="card mt-3">
+  <div class="card-header">
+    <div class="card-title">Historico de movimentacoes</div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Instalador</th>
+          <th>Responsavel</th>
+          <th>Quando</th>
+          <th>Observacoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in caixa.movimentacoes|sort(attribute='criado_em', reverse=True) %}
+        <tr>
+          <td><span class="badge badge-info">{{ m.tipo.value }}</span></td>
+          <td>{{ m.instalador.nome if m.instalador else "-" }}</td>
+          <td>{{ m.registrado_por.nome if m.registrado_por else "-" }}</td>
+          <td class="text-muted">{{ m.criado_em|datetime_br_seconds }}</td>
+          <td>{{ m.observacoes or "-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

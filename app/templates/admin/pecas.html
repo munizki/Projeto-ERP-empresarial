@@ -1,0 +1,37 @@
+{# app/templates/admin/pecas.html #}
+{% extends "shared/base.html" %}
+{% block title %}Tipos de Peças{% endblock %}
+{% block page_title %}🔧 Tipos de Peças{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin/pecas/novo" class="btn btn-primary btn-sm">➕ Novo Tipo</a>
+{% endblock %}
+{% block content %}
+{% if request.query_params.get('sucesso') %}<div class="alert alert-success">✅ Tipo de peça salvo com sucesso!</div>{% endif %}
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Nome</th><th>Unidade</th><th>Est. Mínimo (%)</th><th>Estoque Atual</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody>
+        {% for t in tipos %}
+        <tr>
+          <td><strong>{{ t.nome }}</strong><br><span class="text-muted">{{ t.descricao or '' }}</span></td>
+          <td>{{ t.unidade_medida }}</td>
+          <td>{{ t.estoque_minimo_percentual|int }}%</td>
+          <td>
+            {% if t.estoque %}
+              {% set pct = (t.estoque.quantidade_atual / t.estoque.quantidade_maxima * 100)|int if t.estoque.quantidade_maxima > 0 else 0 %}
+              {{ t.estoque.quantidade_atual }} / {{ t.estoque.quantidade_maxima }}
+              <span class="badge {{ 'badge-danger' if pct < t.estoque_minimo_percentual else 'badge-success' }}">{{ pct }}%</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>{% if t.ativo %}<span class="badge badge-success">Ativo</span>{% else %}<span class="badge badge-secondary">Inativo</span>{% endif %}</td>
+          <td><a href="/admin/pecas/{{ t.id }}/editar" class="btn btn-sm btn-outline">✏️ Editar</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted" style="padding:24px">Nenhum tipo de peça cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "shared/base.html" %}
+{% block title %}Reverter Conferencia{% endblock %}
+{% block page_title %}Reverter Conferencia de Pecas{% endblock %}
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<div class="page-intro mb-4">
+  <div>
+    <h2>Reversao administrativa de conferencia</h2>
+    <p>Use este fluxo quando a contagem real for digitada errada e precisar voltar o saldo do instalador para o valor anterior com auditoria.</p>
+  </div>
+  <div class="page-intro-badge">Admin</div>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card">
+    <span>Conferencia</span>
+    <strong>#{{ conferencia.id }}</strong>
+    <small>{{ conferencia.data_conferencia|datetime_br_seconds }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Instalador</span>
+    <strong>{{ conferencia.instalador.nome if conferencia.instalador else "-" }}</strong>
+    <small>{{ conferencia.instalador.matricula if conferencia.instalador else "-" }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Responsavel</span>
+    <strong>{{ conferencia.responsavel.nome if conferencia.responsavel else "-" }}</strong>
+    <small>{{ "Com divergencia" if conferencia.tem_divergencia else "Sem divergencia" }}</small>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header"><div class="card-title">Itens que serao restaurados</div></div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Peca</th>
+          <th>Sistema antes</th>
+          <th>Contagem registrada</th>
+          <th>Diferenca</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in conferencia.itens %}
+        <tr class="{{ 'row-highlight' if item.diferenca != 0 else '' }}">
+          <td>{{ item.tipo_peca.nome if item.tipo_peca else "-" }}</td>
+          <td>{{ item.quantidade_sistema }}</td>
+          <td>{{ item.quantidade_real }}</td>
+          <td>
+            {% if item.diferenca > 0 %}
+            <span class="text-warning fw-bold">+{{ item.diferenca }}</span>
+            {% elif item.diferenca < 0 %}
+            <span class="text-danger fw-bold">{{ item.diferenca }}</span>
+            {% else %}
+            <span class="text-success">0</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div style="max-width: 760px;">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Confirmacao em duas etapas</div></div>
+    <div class="card-body">
+      <form method="post" action="/admin/conferencias/{{ conferencia.id }}/reverter" data-dirty-check="true">
+        <input type="hidden" name="next_path" value="{{ next_path or '' }}">
+        <div class="context-disabled-card mb-3">
+          <strong>Impacto da reversao</strong>
+          <span>A conferencia sera removida dos relatorios e o sistema criara movimentos compensatorios para manter a trilha operacional.</span>
+        </div>
+
+        <div class="form-group">
+          <label>Justificativa obrigatoria</label>
+          <textarea name="justificativa" placeholder="Explique por que esta conferencia precisa ser removida." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Digite o ID da conferencia para confirmar</label>
+          <input type="text" name="confirmacao" data-expected="{{ conferencia.id }}" class="confirm-match" placeholder="{{ conferencia.id }}" required>
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" name="confirmacao_final" value="1" required>
+          <span>Confirmo que revisei os saldos e desejo reverter esta conferencia.</span>
+        </label>
+
+        <div class="form-actions mt-3">
+          <button type="submit" class="btn btn-danger" data-confirm="Confirmar a reversao da conferencia #{{ conferencia.id }}?">Reverter conferencia</button>
+          <a href="{{ next_path or '/manipulador/conferencia' }}" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas nesta reversao administrativa. Deseja sair mesmo assim?">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

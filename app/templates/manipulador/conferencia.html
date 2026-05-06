@@ -1,0 +1,78 @@
+{% extends "shared/base.html" %}
+{% block title %}Conferencia de Pecas{% endblock %}
+{% block page_title %}Conferencia Quinzenal de Conexões{% endblock %}
+{% block topbar_actions %}
+  <a href="/manipulador/instaladores" class="btn btn-secondary btn-sm">Ver instaladores</a>
+{% endblock %}
+{% block content %}
+{% if request.query_params.get('sucesso') %}<div class="alert alert-success">Conferencia registrada com sucesso.</div>{% endif %}
+{% if request.query_params.get('reversao') %}<div class="alert alert-success">Conferencia revertida com sucesso.</div>{% endif %}
+
+<div class="page-intro mb-4">
+  <div>
+    <h2>Conferencia preventiva a cada quinzena</h2>
+    <p>Escolha o instalador, confira as conexões fisicas e registre divergencias antes que elas virem problema operacional.</p>
+  </div>
+  <div class="page-intro-badge">{{ instaladores|length }} instalador(es)</div>
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Iniciar nova conferencia</div></div>
+    <div class="card-body">
+      <p class="text-muted mb-3">Selecione o instalador para iniciar a conferencia de conexões.</p>
+      {% if instaladores %}
+      <div class="card-link-list">
+        {% for i in instaladores %}
+        <a href="/manipulador/conferencia/{{ i.id }}" class="card-link-row">
+          <div class="card-link-meta">
+            <strong>{{ i.nome }}</strong>
+            <span class="text-muted">{{ i.matricula }}</span>
+          </div>
+          <span class="btn btn-sm btn-primary">Iniciar</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <p>Nenhum instalador ativo.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Conferencias recentes</div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Instalador</th><th>Responsavel</th><th>Data</th><th>Divergencia</th><th>Acoes</th></tr></thead>
+        <tbody>
+          {% for c in conferencias_recentes %}
+          <tr>
+            <td><strong>{{ c.instalador.nome }}</strong></td>
+            <td>{{ c.responsavel.nome }}</td>
+            <td class="text-muted">{{ c.data_conferencia|datetime_br }}</td>
+            <td>
+              {% if c.tem_divergencia %}
+              <span class="badge badge-danger">Com divergencia</span>
+              {% else %}
+              <span class="badge badge-success">OK</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if is_admin(usuario) and can_use_advanced_mode(request, usuario) %}
+              <a href="/admin/conferencias/{{ c.id }}/reverter" class="btn btn-danger btn-sm">Reverter</a>
+              {% else %}
+              <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted" style="padding:20px">Nenhuma conferencia ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

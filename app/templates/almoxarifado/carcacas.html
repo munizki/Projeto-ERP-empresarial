@@ -1,0 +1,118 @@
+{% extends "shared/base.html" %}
+{% block title %}Carcacas{% endblock %}
+{% block page_title %}Carcacas{% endblock %}
+
+{% block topbar_actions %}
+  {% if is_admin(usuario) %}
+  <a href="/almoxarifado/carcacas/exportar.xlsx" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<section class="executive-hero executive-hero-relatorios mb-4">
+  <div class="executive-hero-main">
+    <span class="executive-kicker">&#9851; GMF</span>
+    <h2>Controle de carcacas</h2>
+    <div class="executive-chip-row">
+      <span class="executive-chip">Entrada</span>
+      <span class="executive-chip">Sabesp</span>
+      <span class="executive-chip">Saldo</span>
+    </div>
+  </div>
+  <div class="executive-hero-metrics">
+    <div class="executive-metric-card"><span>Saldo</span><strong>{{ resumo.saldo }}</strong></div>
+    <div class="executive-metric-card"><span>Devolvidas</span><strong>{{ resumo.devolvido }}</strong></div>
+    <div class="executive-metric-card"><span>Recolhidas</span><strong>{{ resumo.recolhido }}</strong></div>
+  </div>
+</section>
+
+<div class="grid-2 mb-4">
+  <form method="post" action="/almoxarifado/carcacas/devolucao" class="card" data-dirty-check>
+    <div class="card-header"><div class="card-title">&#128119; Registrar devolucao</div></div>
+    <div class="card-body">
+      <div class="form-group">
+        <label>Instalador</label>
+        <select name="instalador_id" required>
+          <option value="">Selecione</option>
+          {% for instalador in instaladores %}
+          <option value="{{ instalador.id }}">{{ instalador.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Quantidade</label>
+          <input type="number" name="quantidade" min="1" required>
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" name="data_movimento">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Documento</label>
+        <input name="documento_referencia" placeholder="Formulario ou protocolo">
+      </div>
+      <div class="form-group">
+        <label>Observacao</label>
+        <textarea name="observacao" rows="2"></textarea>
+      </div>
+      <button type="submit" class="btn btn-success">Salvar entrada</button>
+    </div>
+  </form>
+
+  <form method="post" action="/almoxarifado/carcacas/recolhimento" class="card" data-dirty-check>
+    <div class="card-header"><div class="card-title">&#128666; Recolhimento Sabesp</div></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Quantidade</label>
+          <input type="number" name="quantidade" min="1" max="{{ resumo.saldo }}" required>
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" name="data_movimento">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Documento</label>
+        <input name="documento_referencia" placeholder="Protocolo Sabesp">
+      </div>
+      <div class="form-group">
+        <label>Observacao</label>
+        <textarea name="observacao" rows="2"></textarea>
+      </div>
+      <button type="submit" class="btn btn-warning">Registrar saida</button>
+    </div>
+  </form>
+</div>
+
+<div class="audit-grid">
+  {% for movimento in movimentos %}
+  <article class="audit-card {{ 'audit-card-success' if movimento.tipo_movimento.value == 'devolucao_instalador' else 'audit-card-warning' }}">
+    <div class="audit-card-head">
+      <div class="audit-chip-row">
+        <span class="audit-action-badge audit-action-info">{{ movimento.tipo_movimento.value }}</span>
+        <span class="audit-entity-pill">{{ movimento.quantidade }} un.</span>
+      </div>
+      <div class="audit-time">{{ movimento.data_movimento|datetime_br }}</div>
+    </div>
+    <div class="audit-card-body">
+      <div class="audit-primary-line">
+        <strong>{{ movimento.instalador.nome if movimento.instalador else "Sabesp" }}</strong>
+        <span>{{ movimento.usuario.nome if movimento.usuario else "Sistema" }}</span>
+      </div>
+      <div class="chip-grid mt-3">
+        {% if movimento.documento_referencia %}<span class="chip">&#128196; {{ movimento.documento_referencia }}</span>{% endif %}
+        <span class="chip">&#128344; {{ movimento.criado_em|datetime_br_seconds }}</span>
+      </div>
+      {% if movimento.observacao %}<div class="audit-description">{{ movimento.observacao }}</div>{% endif %}
+    </div>
+  </article>
+  {% else %}
+  <div class="empty-state"><p>Nenhuma movimentacao de carcacas.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

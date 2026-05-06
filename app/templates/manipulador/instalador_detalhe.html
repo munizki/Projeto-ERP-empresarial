@@ -1,0 +1,182 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ instalador.nome }}{% endblock %}
+{% block page_title %}{{ instalador.nome }}{% endblock %}
+{% block topbar_actions %}
+  <a href="/manipulador/solicitacoes/nova?instalador_id={{ instalador.id }}" class="btn btn-primary btn-sm">Nova solicitacao</a>
+{% endblock %}
+{% block content %}
+{% set pecas_ativas = instalador.pecas_posse | selectattr("quantidade") | list %}
+{% set hidrometros_instalador = get_instalador_hidrometros(instalador) %}
+{% set hidrometros_pendentes = hidrometros_instalador | selectattr("status.value","eq","com_instalador") | list %}
+{% set hidrometros_instalados = hidrometros_instalador | selectattr("status.value","eq","instalado") | list %}
+
+<div class="page-intro mb-4">
+  <div>
+    <h2>Visao operacional completa do instalador</h2>
+    <p>Consulte caixas, hidrometros, pecas e historico sem sair da tela principal de acompanhamento.</p>
+  </div>
+  <div class="page-intro-badge">{{ instalador.matricula }}</div>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card">
+    <span>Status</span>
+    <strong>{{ "Ativo" if instalador.ativo else "Inativo" }}</strong>
+    <small>Matricula {{ instalador.matricula }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Caixas em posse</span>
+    <strong>{{ caixas_posse|length }}</strong>
+    <small>{{ hidrometros_pendentes|length }} hidrometros pendentes</small>
+  </div>
+  <div class="summary-card">
+    <span>Hidrometros instalados</span>
+    <strong>{{ hidrometros_instalados|length }}</strong>
+    <small>{{ instalador.solicitacoes|length }} solicitacao(oes)</small>
+  </div>
+</div>
+
+<div class="grid-2 mb-3">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Dados do instalador</div></div>
+    <div class="card-body">
+      <div class="summary-list">
+        <div><span>Nome</span><strong>{{ instalador.nome }}</strong></div>
+        <div><span>Matricula</span><strong>{{ instalador.matricula }}</strong></div>
+        <div><span>Usuario vinculado</span><strong>{{ instalador.usuario.email if instalador.usuario else "-" }}</strong></div>
+        <div><span>Status</span><strong>{{ "Ativo" if instalador.ativo else "Inativo" }}</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Pecas em posse</div></div>
+    <div class="card-body">
+      {% if pecas_ativas %}
+      <div class="stack-sm">
+        {% for pp in pecas_ativas %}
+        <div class="inline-pill-row">
+          <span>{{ pp.tipo_peca.nome }}</span>
+          <span class="badge badge-info">{{ pp.quantidade }} {{ pp.tipo_peca.unidade_medida }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <p>Nenhuma peca em posse.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">
+    <div class="card-title">Caixas em posse</div>
+    <span class="text-muted">{{ caixas_posse|length }} caixa(s)</span>
+  </div>
+  {% if caixas_posse %}
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Numero interno</th>
+          <th>Serial</th>
+          <th>Hidrometros na caixa</th>
+          <th>Pendentes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in caixas_posse %}
+        {% set hidrometros_caixa = get_caixa_hidrometros(c) %}
+        {% set pendentes = hidrometros_caixa | selectattr("status.value","eq","com_instalador") | list | length %}
+        <tr>
+          <td><strong>{{ c.numero_interno }}</strong></td>
+          <td class="mono">{{ c.serial_number }}</td>
+          <td>
+            <div class="stack-sm">
+              {% for h in hidrometros_caixa %}
+              {% set bundle = hidrometro_action_bundle(h, usuario, can_use_advanced_mode(request, usuario)) %}
+              <div class="item-context-card compact">
+                <div class="inline-pill-row">
+                  <div>
+                    <span class="mono">{{ h.numero_serie }}</span>
+                    <div class="action-helper">{{ bundle.summary }}</div>
+                  </div>
+                  <div class="table-actions">
+                    {% if h.status.value == "com_instalador" %}
+                    <span class="badge badge-warning">Pendente</span>
+                    {% elif h.status.value == "instalado" %}
+                    <span class="badge badge-success">Instalado</span>
+                    {% else %}
+                    <span class="badge badge-secondary">{{ humanize_status(h.status) }}</span>
+                    {% endif %}
+                    {% if bundle.primary %}
+                      {% set action = bundle.primary[0] %}
+                      <a href="{{ action.href }}" class="btn btn-sm btn-{{ action.tone }}">{{ action.label }}</a>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </td>
+          <td><span class="badge {{ "badge-warning" if pendentes > 0 else "badge-success" }}">{{ pendentes }}/{{ quantidade_esperada_caixa(c) }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <p>Este instalador nao possui caixas em posse.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Historico de solicitacoes</div>
+    <span class="text-muted">{{ instalador.solicitacoes|length }} registro(s)</span>
+  </div>
+  {% if instalador.solicitacoes %}
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Status</th>
+          <th>Caixas</th>
+          <th>Criada em</th>
+          <th>Entregue em</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in instalador.solicitacoes | sort(attribute="criado_em", reverse=True) %}
+        <tr>
+          <td>#{{ s.id }}</td>
+          <td>
+            {% if s.status.value == "pendente" %}<span class="badge badge-warning">Pendente</span>
+            {% elif s.status.value == "entregue" %}<span class="badge badge-success">Entregue</span>
+            {% elif s.status.value == "separada" %}<span class="badge badge-info">Separada</span>
+            {% else %}<span class="badge badge-secondary">{{ s.status.value }}</span>{% endif %}
+          </td>
+          <td>{{ s.itens_caixa|length }}</td>
+          <td class="text-muted">{{ s.criado_em|datetime_br }}</td>
+          <td class="text-muted">{{ s.entregue_em|datetime_br if s.entregue_em else "-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <p>Nenhuma solicitacao registrada para este instalador.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

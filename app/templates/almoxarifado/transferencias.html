@@ -1,0 +1,69 @@
+{% extends "shared/base.html" %}
+{% block title %}Transferencias{% endblock %}
+{% block page_title %}Transferencias{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/almoxarifado/transferencias/nova" class="btn btn-primary btn-sm">Nova</a>
+  <a href="/almoxarifado/transferencias/exportar.xlsx" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+{% endblock %}
+
+{% block content %}
+<section class="executive-hero executive-hero-relatorios mb-4">
+  <div class="executive-hero-main">
+    <span class="executive-kicker">&#127970; GMF</span>
+    <h2>Transferencias para outra empresa</h2>
+    <div class="executive-chip-row">
+      <span class="executive-chip">&#128230; Caixas</span>
+      <span class="executive-chip">&#128295; Pecas</span>
+      <span class="executive-chip">&#128196; Protocolo</span>
+    </div>
+  </div>
+  <div class="executive-hero-metrics">
+    <div class="executive-metric-card"><span>Total</span><strong>{{ transferencias|length }}</strong></div>
+    <div class="executive-metric-card"><span>Fluxo</span><strong>Auditado</strong></div>
+    <div class="executive-metric-card"><span>Status</span><strong>OK</strong></div>
+  </div>
+</section>
+
+<div class="audit-grid">
+  {% for transferencia in transferencias %}
+  <article class="audit-card audit-card-info">
+    <div class="audit-card-head">
+      <div class="audit-chip-row">
+        <span class="audit-action-badge audit-action-info">TRANSFERENCIA</span>
+        <span class="audit-entity-pill">#{{ transferencia.id }}</span>
+      </div>
+      <div class="audit-time">{{ transferencia.data_transferencia|datetime_br }}</div>
+    </div>
+    <div class="audit-card-body">
+      <div class="audit-primary-line">
+        <strong>{{ transferencia.empresa_destino }}</strong>
+        <span>{{ transferencia.responsavel }}</span>
+      </div>
+      <div class="chip-grid mt-3">
+        <span class="chip">&#128230; {{ transferencia.caixas|length }} caixa(s)</span>
+        <span class="chip">&#128295; {{ transferencia.pecas|length }} tipo(s)</span>
+        {% if transferencia.documento_referencia %}<span class="chip">&#128196; {{ transferencia.documento_referencia }}</span>{% endif %}
+        <span class="chip">&#128100; {{ transferencia.usuario.nome if transferencia.usuario else "Sistema" }}</span>
+      </div>
+      {% if transferencia.caixas %}
+      <div class="audit-description">
+        {% for item in transferencia.caixas %}
+          {{ item.caixa.numero_interno if item.caixa else "-" }}{% if not loop.last %}, {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if transferencia.pecas %}
+      <div class="chip-grid mt-3">
+        {% for item in transferencia.pecas %}
+        <span class="chip">{{ item.tipo_peca.nome if item.tipo_peca else "Peca" }}: {{ item.quantidade }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </article>
+  {% else %}
+  <div class="empty-state"><p>Nenhuma transferencia registrada.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

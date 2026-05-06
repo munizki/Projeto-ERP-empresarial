@@ -1,0 +1,124 @@
+{% extends "shared/base.html" %}
+{% block title %}Solicitacoes e Entregas{% endblock %}
+{% block page_title %}Fila do Almoxarifado{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('sucesso') %}
+<div class="alert alert-success">Entrega confirmada com sucesso e materiais vinculados ao instalador.</div>
+{% endif %}
+{% if request.query_params.get('cancelada') %}
+<div class="alert alert-info">Solicitacao cancelada e reservas liberadas com seguranca.</div>
+{% endif %}
+{% if request.query_params.get('reversao_entrega') %}
+<div class="alert alert-success">Entrega revertida com sucesso.</div>
+{% endif %}
+{% if request.query_params.get('erro') %}
+<div class="alert alert-danger">{{ request.query_params.get('erro') }}</div>
+{% endif %}
+
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Solicitacoes em tratamento</h2>
+    <p>Separe primeiro as caixas fisicas. Quando preciso, cancele antes da entrega para liberar a operacao sem apagar o historico.</p>
+  </div>
+  <div class="page-intro-badge">{{ solicitacoes|length }} fila(s)</div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/almoxarifado/estoque" class="btn btn-secondary btn-sm">Estoque</a>
+  <a href="/almoxarifado/confirmacoes-instalador" class="btn btn-outline btn-sm">Confirmacoes do instalador</a>
+  <a href="/manipulador/solicitacoes/nova" class="btn btn-primary btn-sm">Nova solicitacao</a>
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Instalador</th>
+          <th>Itens</th>
+          <th>Status</th>
+          <th>Criada por</th>
+          <th>Criada em</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in solicitacoes %}
+        {% set bundle = solicitacao_action_bundle(s, usuario, can_use_advanced_mode(request, usuario)) %}
+        <tr>
+          <td class="text-muted">#{{ s.id }}</td>
+          <td>
+            <strong>{{ s.instalador.nome }}</strong>
+            <div class="text-muted">{{ s.instalador.matricula }}</div>
+          </td>
+          <td>
+            <div>{{ s.itens_caixa|length }} caixa(s)</div>
+            <div class="text-muted">
+              {% if s.itens_peca %}
+                {% for item in s.itens_peca %}
+                  {{ item.tipo_peca.nome }}: {{ item.quantidade_solicitada }}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                Sem pecas
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            {% if s.status.value == 'pendente' %}<span class="badge badge-warning">Pendente</span>
+            {% elif s.status.value == 'separada' %}<span class="badge badge-info">Separada</span>
+            {% elif s.status.value == 'entregue' %}
+              <span class="badge badge-success">Entregue</span>
+              {% set recebimento = s.recebimento_instalador_status or 'pendente' %}
+              <div class="mt-2">
+                {% if recebimento == 'confirmado' %}
+                <span class="badge badge-success">Instalador confirmou</span>
+                {% elif recebimento == 'divergencia' %}
+                <span class="badge badge-danger">Divergencia do instalador</span>
+                {% else %}
+                <span class="badge badge-warning">Aguardando instalador</span>
+                {% endif %}
+              </div>
+              {% if s.motivo_divergencia_instalador %}
+              <div class="text-danger mt-1">{{ s.motivo_divergencia_instalador }}</div>
+              {% endif %}
+            {% elif s.status.value == 'cancelada' %}<span class="badge badge-danger">Cancelada</span>
+            {% else %}<span class="badge badge-secondary">{{ s.status.value }}</span>{% endif %}
+          </td>
+          <td>{{ s.criado_por.nome if s.criado_por else '-' }}</td>
+          <td class="text-muted">{{ s.criado_em|datetime_br }}</td>
+          <td>
+            <div class="table-actions">
+              {% if bundle.primary %}
+                {% set action = bundle.primary[0] %}
+                <a href="{{ action.href }}" class="btn btn-sm btn-{{ action.tone }}">{{ action.label }}</a>
+              {% elif bundle.blocked %}
+                <span class="badge badge-secondary">{{ bundle.blocked[0].label }}</span>
+              {% endif %}
+              {% if s.status.value in ['pendente', 'separada'] %}
+              <form method="post" action="/manipulador/solicitacoes/{{ s.id }}/cancelar">
+                <input type="hidden" name="next_path" value="/almoxarifado/solicitacoes">
+                <button type="submit" class="btn btn-sm btn-danger" data-confirm="Cancelar a solicitacao #{{ s.id }}?">Cancelar</button>
+              </form>
+              {% endif %}
+              {% if is_admin(usuario) and can_use_advanced_mode(request, usuario) %}
+              {% if s.status.value == 'entregue' %}
+              <a href="/admin/solicitacoes/{{ s.id }}/reverter-entrega?next_path=/almoxarifado/solicitacoes" class="btn btn-sm btn-danger">Reverter entrega</a>
+              {% endif %}
+              <a href="/admin/limpeza/solicitacoes/{{ s.id }}?next=/almoxarifado/solicitacoes" class="btn btn-sm btn-outline">Excluir admin</a>
+              {% endif %}
+            </div>
+            <div class="action-helper">{{ bundle.summary }}</div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center text-muted" style="padding: 30px;">Nenhuma solicitacao registrada.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

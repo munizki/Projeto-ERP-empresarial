@@ -1,0 +1,96 @@
+{% extends "shared/base.html" %}
+{% block title %}Feedbacks{% endblock %}
+{% block page_title %}Feedbacks Internos{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('limpeza') %}
+<div class="alert alert-success">{{ request.query_params.get('limpeza') }} feedback(s) resolvido(s) removido(s).</div>
+{% endif %}
+{% if request.query_params.get('erro_limpeza') %}
+<div class="alert alert-danger">Digite LIMPAR para confirmar a limpeza de feedbacks resolvidos.</div>
+{% endif %}
+
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Fila de feedback</h2>
+  </div>
+  <div class="page-intro-badge">{{ feedbacks|length }} registro(s)</div>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card"><span>Novo</span><strong>{{ feedback_counts.novo }}</strong></div>
+  <div class="summary-card"><span>Em analise</span><strong>{{ feedback_counts.em_analise }}</strong></div>
+  <div class="summary-card"><span>Resolvido</span><strong>{{ feedback_counts.resolvido }}</strong></div>
+  <div class="summary-card summary-card-urgent"><span>Urgentes</span><strong>{{ feedback_counts.urgente }}</strong></div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/admin/feedbacks" class="btn btn-outline btn-sm">Todos</a>
+  <a href="/admin/feedbacks?status=novo" class="btn btn-warning btn-sm">Novos</a>
+  <a href="/admin/feedbacks?status=em_analise" class="btn btn-info btn-sm">Em analise</a>
+  <a href="/admin/feedbacks?status=resolvido" class="btn btn-success btn-sm">Resolvidos</a>
+</div>
+
+<form method="post" action="/admin/feedbacks/limpar-resolvidos" class="toolbar-strip mb-3 no-print">
+  <div class="form-group mb-0">
+    <label>Resolvidos ha pelo menos</label>
+    <input type="number" name="dias_minimos" value="30" min="1" max="3650">
+  </div>
+  <div class="form-group mb-0">
+    <label>Confirmacao</label>
+    <input type="text" name="confirmacao" placeholder="Digite LIMPAR">
+  </div>
+  <button type="submit" class="btn btn-danger btn-sm">Limpar resolvidos</button>
+</form>
+
+<div class="enterprise-card-grid">
+  {% for feedback in feedbacks %}
+  <article class="enterprise-panel-card {% if feedback.urgente %}urgent{% endif %}">
+    <div class="enterprise-panel-head">
+      <div>
+        <span class="badge {% if feedback.status.value == 'novo' %}badge-warning{% elif feedback.status.value == 'em_analise' %}badge-info{% else %}badge-success{% endif %}">
+          {{ feedback.status.value.replace('_', ' ') }}
+        </span>
+        {% if feedback.urgente %}
+        <span class="badge badge-danger ml-2">Urgente</span>
+        {% endif %}
+        <strong class="ml-2">#{{ feedback.id }} - {{ feedback.titulo }}</strong>
+      </div>
+      <span class="text-muted">{{ feedback.criado_em|datetime_br_seconds }}</span>
+    </div>
+    <div class="enterprise-panel-meta">
+      <span>{{ feedback.usuario.nome if feedback.usuario else '-' }}</span>
+      <span>{{ feedback.area|capitalize }}</span>
+      <span>{{ feedback.categoria|capitalize }}</span>
+      <span>{{ feedback.pagina_origem or '-' }}</span>
+    </div>
+    <p class="feedback-card-text">{{ feedback.mensagem }}</p>
+    {% if feedback.anexos %}
+    <div class="feedback-mini-badges mb-3">
+      {% for anexo in feedback.anexos %}
+      <a class="badge badge-secondary" href="/admin/feedbacks/anexos/{{ anexo.id }}" target="_blank" rel="noopener">
+        {{ anexo.nome_original }}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="enterprise-panel-actions">
+      <form method="post" action="/admin/feedbacks/{{ feedback.id }}/status">
+        <input type="hidden" name="status" value="novo">
+        <button type="submit" class="btn btn-sm btn-outline">Marcar novo</button>
+      </form>
+      <form method="post" action="/admin/feedbacks/{{ feedback.id }}/status">
+        <input type="hidden" name="status" value="em_analise">
+        <button type="submit" class="btn btn-sm btn-info">Em analise</button>
+      </form>
+      <form method="post" action="/admin/feedbacks/{{ feedback.id }}/status">
+        <input type="hidden" name="status" value="resolvido">
+        <button type="submit" class="btn btn-sm btn-success">Resolver</button>
+      </form>
+    </div>
+  </article>
+  {% else %}
+  <div class="empty-state"><p>Nenhum feedback encontrado para este filtro.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

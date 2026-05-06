@@ -1,0 +1,75 @@
+{% extends "shared/base.html" %}
+{% block title %}Reverter Entrega{% endblock %}
+{% block page_title %}Reverter Entrega da Solicitacao{% endblock %}
+
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+{% if erro_contexto and not erro %}<div class="alert alert-warning">{{ erro_contexto }}</div>{% endif %}
+
+<div class="page-intro mb-4">
+  <div>
+    <h2>Reversao administrativa da entrega</h2>
+    <p>Devolve caixas e pecas para um contexto seguro, sem precisar limpar banco por codigo.</p>
+  </div>
+  <div class="page-intro-badge">Admin</div>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card">
+    <span>Solicitacao</span>
+    <strong>#{{ solicitacao.id }}</strong>
+    <small>{{ solicitacao.status.value }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Instalador</span>
+    <strong>{{ solicitacao.instalador.nome if solicitacao.instalador else "-" }}</strong>
+    <small>{{ solicitacao.instalador.matricula if solicitacao.instalador else "-" }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Entrega</span>
+    <strong>{{ solicitacao.entregue_em|datetime_br_seconds if solicitacao.entregue_em else "-" }}</strong>
+    <small>{{ solicitacao.entregue_por.nome if solicitacao.entregue_por else "Sem responsavel" }}</small>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header"><div class="card-title">Impacto da reversao</div></div>
+  <div class="card-body">
+    <div class="summary-list">
+      <div><span>Caixas</span><strong>{{ solicitacao.itens_caixa|length }}</strong></div>
+      <div><span>Pecas</span><strong>{{ solicitacao.itens_peca|sum(attribute='quantidade_solicitada') if solicitacao.itens_peca else 0 }}</strong></div>
+      <div><span>Status final</span><strong>Separada</strong></div>
+    </div>
+  </div>
+</div>
+
+<div style="max-width: 760px;">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Confirmacao em duas etapas</div></div>
+    <div class="card-body">
+      <form method="post" action="/admin/solicitacoes/{{ solicitacao.id }}/reverter-entrega" data-dirty-check="true">
+        <input type="hidden" name="next_path" value="{{ next_path }}">
+
+        <div class="form-group">
+          <label>Justificativa obrigatoria</label>
+          <textarea name="justificativa" placeholder="Explique por que a entrega precisa ser revertida." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Digite o ID da solicitacao para confirmar</label>
+          <input type="text" name="confirmacao" data-expected="{{ solicitacao.id }}" class="confirm-match" placeholder="{{ solicitacao.id }}" required>
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" name="confirmacao_final" value="1" required>
+          <span>Confirmo que revisei o fluxo e desejo reverter esta entrega.</span>
+        </label>
+
+        <div class="form-actions mt-3">
+          <button type="submit" class="btn btn-danger" data-confirm="Confirmar a reversao da entrega da solicitacao #{{ solicitacao.id }}?">Reverter entrega</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

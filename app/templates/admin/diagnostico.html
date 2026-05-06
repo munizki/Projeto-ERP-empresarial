@@ -1,0 +1,137 @@
+{% extends "shared/base.html" %}
+{% block title %}Diagnostico{% endblock %}
+{% block page_title %}Diagnostico Operacional{% endblock %}
+
+{% block topbar_actions %}
+<a href="/admin/diagnostico/exportar.xlsx" class="btn btn-outline btn-sm" download>Baixar XLSX</a>
+<a href="/admin/exportacao-periodica.zip" class="btn btn-success btn-sm" download>&#128229; Exportar ZIP</a>
+{% endblock %}
+
+{% block content %}
+<section class="dashboard-action-section mb-4">
+  <div class="dashboard-action-grid">
+    {% for key, label, tone in [
+      ('caixas_incompletas', 'Caixas', 'amber'),
+      ('hidrometros_sem_caixa', 'Sem caixa', 'red'),
+      ('hidrometros_duplicados', 'Duplicados', 'red'),
+      ('estoques_negativos', 'Estoque negativo', 'red'),
+      ('estoques_acima_limite', 'Acima limite', 'amber'),
+      ('solicitacoes_pendentes_antigas', 'Pendentes antigas', 'blue'),
+      ('movimentacoes_sem_usuario', 'Sem usuario', 'red'),
+      ('alteracoes_admin_24h', 'Admin 24h', 'violet'),
+      ('eventos_suspeitos_24h', 'Suspeitos 24h', 'amber'),
+      ('tentativas_bloqueadas_24h', 'Bloqueadas', 'red')
+    ] %}
+    <article class="dashboard-action-card {{ tone if diagnostico.resumo[key] else 'green' }}">
+      <div class="dashboard-action-emoji">{{ 'OK' if not diagnostico.resumo[key] else '!' }}</div>
+      <div class="dashboard-action-title">{{ diagnostico.resumo[key] }}</div>
+      <div class="dashboard-action-mini">{{ label }}</div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+{% if diagnostico.bloqueadores_criticos %}
+<div class="alert alert-danger mb-4">
+  Bloqueadores criticos:
+  {% for item in diagnostico.bloqueadores_criticos %}
+    <strong>{{ item }}</strong>{% if not loop.last %} | {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Caixas incompletas</div></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for caixa in diagnostico.amostras.caixas_incompletas %}
+        <article class="enterprise-mini-card urgent">
+          <div class="enterprise-mini-head"><span class="badge badge-warning">Revisar</span><span>#{{ caixa.id }}</span></div>
+          <strong>{{ caixa.numero_interno }}</strong>
+          <p class="feedback-card-text">{{ get_caixa_hidrometros(caixa)|length }}/{{ quantidade_esperada_caixa(caixa) }} hidrometros</p>
+          <a href="/almoxarifado/caixas/{{ caixa.id }}" class="btn btn-outline btn-sm">Abrir</a>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhuma caixa incompleta.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Estoque divergente</div></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for estoque in diagnostico.estoques_negativos + diagnostico.estoques_acima_limite %}
+        <article class="enterprise-mini-card urgent">
+          <div class="enterprise-mini-head"><span class="badge badge-danger">Saldo</span><span>#{{ estoque.id }}</span></div>
+          <strong>{{ estoque.tipo_peca.nome if estoque.tipo_peca else '-' }}</strong>
+          <p class="feedback-card-text">{{ estoque.quantidade_atual }}/{{ estoque.quantidade_maxima }}</p>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhuma divergencia de saldo.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-grid mt-4">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Solicitacoes antigas</div></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for solicitacao in diagnostico.amostras.solicitacoes_pendentes_antigas %}
+        <article class="enterprise-mini-card">
+          <div class="enterprise-mini-head"><span class="badge badge-warning">Pendente</span><span>{{ solicitacao.criado_em|datetime_br }}</span></div>
+          <strong>#{{ solicitacao.id }} {{ solicitacao.instalador.nome if solicitacao.instalador else '' }}</strong>
+          <a href="/almoxarifado/solicitacoes/{{ solicitacao.id }}/separar" class="btn btn-outline btn-sm">Abrir</a>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhuma solicitacao antiga.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Administrativo recente</div></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for log in diagnostico.alteracoes_admin_recentes %}
+        <article class="enterprise-mini-card">
+          <div class="enterprise-mini-head"><span class="badge badge-info">{{ log.acao }}</span><span>{{ log.criado_em|datetime_br_seconds }}</span></div>
+          <strong>{{ log.usuario.nome if log.usuario else 'Sistema' }}</strong>
+          <p class="feedback-card-text">{{ log.descricao or '-' }}</p>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhuma alteracao recente.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-grid mt-4">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Tentativas bloqueadas</div></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for log in diagnostico.amostras.eventos_suspeitos_recentes %}
+        <article class="enterprise-mini-card urgent">
+          <div class="enterprise-mini-head">
+            <span class="badge {{ 'badge-danger' if log.severidade == 'CRITICO' else 'badge-warning' }}">{{ log.severidade }}</span>
+            <span>{{ log.criado_em|datetime_br_seconds }}</span>
+          </div>
+          <strong>{{ log.acao }}</strong>
+          <p class="feedback-card-text">{{ log.descricao or '-' }}</p>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhuma tentativa bloqueada recente.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

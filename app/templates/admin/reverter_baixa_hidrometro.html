@@ -1,0 +1,111 @@
+{% extends "shared/base.html" %}
+{% block title %}Reverter Baixa{% endblock %}
+{% block page_title %}Reverter Baixa Instalada{% endblock %}
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<div class="page-intro mb-4">
+  <div>
+    <h2>Reversao administrativa com auditoria obrigatoria</h2>
+    <p>
+      Remove a baixa instalada e restaura o hidrometro para
+      {% if contexto_retorno.source == "estoque" %}
+      o estoque
+      {% else %}
+      o contexto do instalador
+      {% endif %}
+      , permitindo corrigir erros e limpar dados de teste com controle.
+    </p>
+  </div>
+  <div class="page-intro-badge">Admin</div>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card">
+    <span>Serie</span>
+    <strong class="mono">{{ hidrometro.numero_serie }}</strong>
+    <small>Confirmacao obrigatoria</small>
+  </div>
+  <div class="summary-card">
+    <span>Status atual</span>
+    <strong>{{ humanize_status(hidrometro.status) }}</strong>
+    <small>{{ hidrometro.instalado_em|datetime_br_seconds if hidrometro.instalado_em else "-" }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Retorno</span>
+    <strong>
+      {% if contexto_retorno.source == "estoque" %}
+      Estoque
+      {% else %}
+      {{ instalador_retorno.nome if instalador_retorno else "Instalador nao identificado" }}
+      {% endif %}
+    </strong>
+    <small>
+      {% if contexto_retorno.source == "estoque" %}
+      Caixa volta para contexto seguro de estoque
+      {% else %}
+      {{ instalador_retorno.matricula if instalador_retorno else "Retorno pelo historico da baixa" }}
+      {% endif %}
+    </small>
+  </div>
+</div>
+
+<div style="max-width: 760px;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Confirmacao em duas etapas</div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="/admin/hidrometros/{{ hidrometro.id }}/reverter-baixa" data-dirty-check="true">
+        <input type="hidden" name="next_path" value="{{ next_path or '' }}">
+        <div class="context-disabled-card mb-3">
+          <strong>Impacto da reversao</strong>
+          <span>
+            A movimentacao de baixa sera removida e o hidrometro voltara para
+            {% if contexto_retorno.source == "estoque" %}
+            "Em estoque"
+            {% else %}
+            "Com instalador"
+            {% endif %}
+            . Depois disso, o admin podera continuar a limpeza do fluxo de teste.
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label>Justificativa obrigatoria</label>
+          <textarea name="justificativa" placeholder="Explique por que a baixa precisa ser removida." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Digite o serial do hidrometro para confirmar</label>
+          <input type="text" name="confirmacao_serial" data-expected="{{ hidrometro.numero_serie }}" class="confirm-match" placeholder="{{ hidrometro.numero_serie }}" required>
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" name="confirmacao_reversao" value="1" required>
+          <span>Confirmo que revisei o contexto e desejo remover esta baixa instalada.</span>
+        </label>
+
+        <div class="form-actions mt-3">
+          <button type="submit" class="btn btn-danger" data-confirm="Confirmar a reversao da baixa do hidrometro {{ hidrometro.numero_serie }}?">Reverter baixa instalada</button>
+          <a href="{{ next_path or ('/manipulador/rastrear?numero_serie=' ~ hidrometro.numero_serie) }}" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas nesta reversao administrativa. Deseja sair mesmo assim?">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if movimento_baixa %}
+  <div class="card mt-3">
+    <div class="card-header"><div class="card-title">Movimentacao vinculada</div></div>
+    <div class="card-body">
+      <div class="summary-list">
+        <div><span>Movimento</span><strong>#{{ movimento_baixa.id }}</strong></div>
+        <div><span>Caixa</span><strong>{{ hidrometro.caixa.numero_interno if hidrometro.caixa else "-" }}</strong></div>
+        <div><span>Registrado em</span><strong>{{ movimento_baixa.criado_em|datetime_br_seconds }}</strong></div>
+        <div><span>Observacoes</span><strong>{{ movimento_baixa.observacoes or "-" }}</strong></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

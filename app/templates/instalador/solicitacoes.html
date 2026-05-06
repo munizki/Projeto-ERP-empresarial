@@ -1,0 +1,43 @@
+{% extends "shared/base.html" %}
+{% block title %}Minhas Solicitacoes{% endblock %}
+{% block page_title %}Minhas Solicitacoes{% endblock %}
+
+{% block content %}
+<section class="installer-hero mb-4">
+  <div>
+    <span class="executive-kicker">Consulta operacional</span>
+    <h2>{{ instalador.nome }}</h2>
+    <p class="text-muted">Solicitacoes criadas para voce. Esta tela e somente leitura.</p>
+  </div>
+  <div class="installer-hero-count"><strong>{{ solicitacoes|length }}</strong><span>registro(s)</span></div>
+</section>
+
+{% include "instalador/_admin_preview_nav.html" %}
+
+<div class="installer-card-grid">
+  {% for s in solicitacoes %}
+  <article class="installer-card">
+    <div class="installer-card-head">
+      <div>
+        <span class="text-muted">Solicitacao #{{ s.id }}</span>
+        <h3>{{ s.criado_em|datetime_br }}</h3>
+      </div>
+      <span class="badge badge-info">{{ s.status.value }}</span>
+    </div>
+    <div class="installer-meta">
+      <span>Manipulador: {{ s.criado_por.nome if s.criado_por else '-' }}</span>
+      <span>Entrega: {{ s.entregue_em|datetime_br if s.entregue_em else '-' }}</span>
+    </div>
+    {% if s.itens_caixa %}
+    <div class="installer-row"><strong>Caixas</strong><span>{{ s.itens_caixa|length }}</span></div>
+    {% endif %}
+    {% for item in s.itens_peca %}
+    <div class="installer-row"><strong>{{ item.tipo_peca.nome }}</strong><span>{{ item.quantidade_solicitada }}</span></div>
+    {% endfor %}
+    {% if s.observacoes %}<div class="audit-description">{{ s.observacoes }}</div>{% endif %}
+  </article>
+  {% else %}
+  <div class="empty-state"><p>Nenhuma solicitacao vinculada a voce.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

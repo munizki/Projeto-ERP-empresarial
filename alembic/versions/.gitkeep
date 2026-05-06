@@ -1,0 +1,5 @@
+# Pasta de migrações Alembic
+# As migrações são geradas automaticamente com:
+#   alembic revision --autogenerate -m "descricao"
+# E aplicadas com:
+#   alembic upgrade head

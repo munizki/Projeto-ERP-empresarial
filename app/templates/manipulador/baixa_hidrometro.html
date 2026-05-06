@@ -1,0 +1,84 @@
+{% extends "shared/base.html" %}
+{% block title %}Baixa de Hidrometro{% endblock %}
+{% block page_title %}Baixa de Hidrometro{% endblock %}
+
+{% block content %}
+{% if request.query_params.get("sucesso") %}
+<div class="alert alert-success">Baixa registrada com sucesso. O hidrometro foi marcado como instalado.</div>
+{% endif %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<div style="max-width: 760px;">
+  <div class="page-intro mb-4">
+    <div>
+      <h2>Registrar instalacao em campo</h2>
+      <p>Somente hidrometros com contexto correto chegam com o botao de baixa liberado. Quando nao estiver disponivel, o sistema explica o motivo.</p>
+    </div>
+  </div>
+
+  <div class="wizard-steps">
+    <div class="wizard-step"><strong>1</strong><div><span>Busca</span><b>Serial localizado</b></div></div>
+    <div class="wizard-step"><strong>2</strong><div><span>Contexto</span><b>Com instalador</b></div></div>
+    <div class="wizard-step"><strong>3</strong><div><span>Baixa</span><b>Instalacao registrada</b></div></div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header"><div class="card-title">Buscar hidrometro</div></div>
+    <div class="card-body">
+      <form method="post" action="/manipulador/baixa-hidrometro/buscar" class="inline-form">
+        <input type="text" name="numero_serie" value="{{ numero_serie or (hidrometro.numero_serie if hidrometro else '') }}" placeholder="Numero de serie" required data-scanner-field="true" autocomplete="off" autocapitalize="characters" spellcheck="false" autofocus>
+        <button type="submit" class="btn btn-primary">Buscar</button>
+      </form>
+    </div>
+  </div>
+
+  {% if hidrometro %}
+  {% set bundle = hidrometro_action_bundle(hidrometro, usuario, can_use_advanced_mode(request, usuario)) %}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Hidrometro localizado</div>
+      <span class="badge {% if hidrometro.status.value == 'em_estoque' %}badge-success{% elif hidrometro.status.value == 'com_instalador' %}badge-warning{% else %}badge-info{% endif %}">
+        {{ humanize_status(hidrometro.status) }}
+      </span>
+    </div>
+    <div class="card-body">
+      <div class="summary-list mb-3">
+        <div><span>Serie</span><strong class="mono">{{ hidrometro.numero_serie }}</strong></div>
+        <div><span>Caixa</span><strong>{% if hidrometro.caixa %}{{ hidrometro.caixa.numero_interno }} / {{ hidrometro.caixa.serial_number }}{% else %}Sem caixa{% endif %}</strong></div>
+        <div><span>Instalador</span><strong>{{ hidrometro.instalador_atual.nome if hidrometro.instalador_atual else "-" }}</strong></div>
+      </div>
+
+      {% set hide_primary = True %}
+      {% include "shared/partials/context_actions.html" %}
+      {% set hide_primary = False %}
+
+      {% if hidrometro.status.value == "com_instalador" %}
+      <form method="post" action="/manipulador/baixa-hidrometro/confirmar" class="mt-3">
+        <input type="hidden" name="hidrometro_id" value="{{ hidrometro.id }}">
+        <div class="context-confirm mb-3">
+          <div class="summary-list mb-3">
+            <div><span>Acao</span><strong>Instalar hidrometro</strong></div>
+            <div><span>Serial</span><strong class="mono">{{ hidrometro.numero_serie }}</strong></div>
+            <div><span>Instalador</span><strong>{{ hidrometro.instalador_atual.nome if hidrometro.instalador_atual else '-' }}</strong></div>
+          </div>
+          <div class="form-group">
+            <label>Confirme o serial do hidrometro</label>
+            <input type="text" name="confirmacao_serial" placeholder="{{ hidrometro.numero_serie }}" required data-scanner-field="true" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          </div>
+          <label class="checkbox-row">
+            <input type="checkbox" name="confirmacao_contexto" value="1" required>
+            <span>Confirmo que este hidrometro esta com o instalador correto e sera marcado como instalado.</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Observacoes</label>
+          <input type="text" name="observacoes" placeholder="Ex: instalado na OS 12345">
+        </div>
+        <button type="submit" class="btn btn-success btn-lg" data-confirm="Confirmar baixa definitiva do hidrometro {{ hidrometro.numero_serie }}?">Confirmar baixa</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "shared/base.html" %}
+{% block title %}Instaladores{% endblock %}
+{% block page_title %}&#128119; Instaladores{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('sucesso') %}<div class="alert alert-success">Operacao realizada com sucesso.</div>{% endif %}
+{% if request.query_params.get('limpeza') == 'instalador_excluido' %}<div class="alert alert-success">Instalador apagado definitivamente pela limpeza administrativa.</div>{% endif %}
+
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Cadastros de instaladores</h2>
+    <p>Gerencie perfis de campo, edite dados e use a exclusao definitiva apenas no modo avancado quando o cadastro ainda nao tiver historico operacional.</p>
+  </div>
+  <div class="page-intro-badge">{{ instaladores|length }} registro(s)</div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/admin/instaladores/novo" class="btn btn-primary btn-sm">Novo instalador</a>
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nome</th>
+          <th>Matricula</th>
+          <th>Usuario vinculado</th>
+          <th>Status</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in instaladores %}
+        <tr>
+          <td class="text-muted">{{ i.id }}</td>
+          <td><strong>{{ i.nome }}</strong></td>
+          <td><span class="badge badge-secondary">{{ i.matricula }}</span></td>
+          <td>{{ i.usuario.email if i.usuario else '-' }}</td>
+          <td>{% if i.ativo %}<span class="badge badge-success">Ativo</span>{% else %}<span class="badge badge-secondary">Inativo</span>{% endif %}</td>
+          <td>
+            <div class="table-actions">
+              <a href="/admin/instaladores/{{ i.id }}/editar" class="btn btn-sm btn-outline">Editar</a>
+              <a href="/manipulador/instaladores/{{ i.id }}" class="btn btn-sm btn-info">Ver</a>
+              {% if can_use_advanced_mode(request, usuario) %}
+              <a href="/admin/limpeza/instaladores/{{ i.id }}?next=/admin/instaladores" class="btn btn-sm btn-danger">Excluir</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted" style="padding:24px">Nenhum instalador cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

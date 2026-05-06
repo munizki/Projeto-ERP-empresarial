@@ -1,0 +1,109 @@
+{% extends "shared/base.html" %}
+{% block title %}Relatorio - Baixas{% endblock %}
+{% block page_title %}Baixas Instaladas{% endblock %}
+
+{% block content %}
+<section class="executive-hero executive-hero-relatorios mb-4">
+  <div class="executive-hero-main">
+    <span class="executive-kicker">&#9989; GMF</span>
+    <h2>Baixas registradas</h2>
+    <div class="executive-chip-row">
+      <span class="executive-chip">&#128225; Sistema</span>
+      <span class="executive-chip">&#128229; XLSX</span>
+      <span class="executive-chip">&#129534; Historico</span>
+    </div>
+  </div>
+  <div class="executive-hero-metrics">
+    <div class="executive-metric-card">
+      <span>Total</span>
+      <strong>{{ baixas_kpis.total }}</strong>
+      <small>Hidrometros</small>
+    </div>
+    <div class="executive-metric-card">
+      <span>Caixas</span>
+      <strong>{{ baixas_kpis.caixas }}</strong>
+      <small>Com baixa</small>
+    </div>
+    <div class="executive-metric-card">
+      <span>24h</span>
+      <strong>{{ baixas_kpis.ultimas_24h }}</strong>
+      <small>Recentes</small>
+    </div>
+  </div>
+</section>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/relatorios" class="btn btn-outline btn-sm">Relatorios</a>
+  <a href="/relatorios/baixas/exportar.xlsx" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+</div>
+
+<div class="summary-grid mb-4">
+  <div class="summary-card section-card section-info">
+    <span>Instaladores</span>
+    <strong>{{ baixas_kpis.instaladores }}</strong>
+    <small>Com baixa registrada</small>
+  </div>
+  <div class="summary-card section-card section-manip">
+    <span>Total instalado</span>
+    <strong>{{ baixas_kpis.total }}</strong>
+    <small>Hidrometros finalizados</small>
+  </div>
+  <div class="summary-card section-card section-warning">
+    <span>Ultimas 24h</span>
+    <strong>{{ baixas_kpis.ultimas_24h }}</strong>
+    <small>Baixas recentes</small>
+  </div>
+</div>
+
+{% if baixas %}
+<div class="audit-grid">
+  {% for item in baixas %}
+  <article class="audit-card audit-card-info">
+    <div class="audit-card-head">
+      <div class="audit-chip-row">
+        <span class="audit-action-badge audit-action-info">INSTALADO</span>
+        <span class="audit-entity-pill">{{ item.numero_serie }}</span>
+      </div>
+      <div class="audit-time">{{ item.instalado_em|datetime_br_seconds if item.instalado_em else "-" }}</div>
+    </div>
+
+    <div class="audit-card-body">
+      <div class="audit-primary-line">
+        <strong>{{ item.instalador_nome }}</strong>
+        <span>{{ item.operador_nome }}</span>
+      </div>
+
+      <div class="audit-meta-row">
+        <span>Caixa {{ item.caixa_numero }}</span>
+        <span>{{ item.caixa_serial }}</span>
+      </div>
+
+      {% if item.observacoes %}
+      <div class="audit-description">{{ item.observacoes }}</div>
+      {% endif %}
+
+      <div class="chip-grid mt-3">
+        <span class="chip">&#128167; {{ item.numero_serie }}</span>
+        <span class="chip">&#128230; {{ item.caixa_numero }}</span>
+        <span class="chip">&#128119; {{ item.instalador_nome }}</span>
+        <span class="chip">&#129489; {{ item.operador_nome }}</span>
+        {% if item.contexto_legado %}
+        <span class="chip">&#128344; Contexto do historico</span>
+        {% endif %}
+      </div>
+
+      {% if can_use_advanced_mode(request, usuario) and is_admin(usuario) %}
+      <div class="form-actions mt-3 no-print">
+        <a href="/manipulador/rastrear?numero_serie={{ item.numero_serie }}" class="btn btn-secondary btn-sm">Abrir</a>
+        <a href="/admin/hidrometros/{{ item.id }}/reverter-baixa" class="btn btn-danger btn-sm">Reverter baixa</a>
+      </div>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><p>Nenhuma baixa registrada.</p></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "shared/base.html" %}
+{% block title %}Exclusao Administrativa{% endblock %}
+{% block page_title %}&#128465; Exclusao Administrativa{% endblock %}
+
+{% block content %}
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>{{ preview.entity_kind }}: {{ preview.entity_title }}</h2>
+  </div>
+  <div class="page-intro-badge">Admin</div>
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Visao da exclusao</div>
+    </div>
+    <div class="card-body">
+      <div class="summary-list">
+        <div><span>Tipo</span><strong>{{ preview.entity_kind }}</strong></div>
+        <div><span>Identificador principal</span><strong>{{ preview.entity_title }}</strong></div>
+        <div><span>Referencia</span><strong>{{ preview.entity_subtitle }}</strong></div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="detail-label">Detalhes principais</div>
+      <div class="chip-grid mt-3">
+        {% for label, value in preview.details %}
+        <span class="chip"><strong>{{ label }}:</strong> {{ value }}</span>
+        {% endfor %}
+      </div>
+
+      <hr class="divider">
+
+      <div class="detail-label">Impacto previsto</div>
+      <div class="danger-list mt-3">
+        {% for item in preview.impact_items %}
+        <div class="danger-list-item">{{ item }}</div>
+        {% endfor %}
+      </div>
+
+      {% if preview.warnings %}
+      <hr class="divider">
+      <div class="detail-label">Avisos importantes</div>
+      <div class="danger-list mt-3">
+        {% for item in preview.warnings %}
+        <div class="danger-list-item warning">{{ item }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if preview.blockers %}
+      <hr class="divider">
+      <div class="detail-label">Bloqueios encontrados</div>
+      <div class="danger-list mt-3">
+        {% for item in preview.blockers %}
+        <div class="danger-list-item blocked">{{ item }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card danger-zone">
+    <div class="card-header">
+      <div class="card-title">Confirmacao final</div>
+    </div>
+    <div class="card-body">
+      {% if erro %}<div class="alert alert-danger mb-3">{{ erro }}</div>{% endif %}
+
+      {% if preview.allowed %}
+      <form method="post" action="{{ submit_url }}" class="stack">
+        <input type="hidden" name="next_path" value="{{ next_path }}">
+
+        <div class="form-group">
+          <label>Justificativa obrigatoria</label>
+          <textarea name="justificativa" rows="4" required placeholder="Motivo da exclusao"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Digite para confirmar: <strong>{{ preview.confirm_value }}</strong></label>
+          <input type="text" name="confirmacao" class="confirm-match" data-expected="{{ preview.confirm_value }}" required placeholder="Digite exatamente {{ preview.confirm_value }}">
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" name="confirmacao_final" value="1">
+          <span>Confirmo a exclusao definitiva.</span>
+        </label>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-danger">Apagar definitivamente</button>
+          <a href="{{ back_href }}" class="btn btn-secondary">Voltar</a>
+        </div>
+      </form>
+      {% else %}
+      <div class="form-actions">
+        <a href="{{ back_href }}" class="btn btn-secondary">Voltar</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

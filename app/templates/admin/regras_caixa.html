@@ -1,0 +1,67 @@
+{% extends "shared/base.html" %}
+{% block title %}Regra de Caixa{% endblock %}
+{% block page_title %}Regra de Caixa{% endblock %}
+
+{% block content %}
+{% if request.query_params.get("sucesso") %}
+<div class="alert alert-success">Regra atualizada com auditoria registrada.</div>
+{% endif %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<div class="summary-grid mb-4">
+  <div class="summary-card">
+    <span>Regra ativa</span>
+    <strong>{{ regra_ativa.quantidade_hidrometros }}</strong>
+    <small>hidrometros por caixa nova</small>
+  </div>
+  <div class="summary-card">
+    <span>Vigente desde</span>
+    <strong style="font-size:18px">{{ regra_ativa.vigente_desde|datetime_br }}</strong>
+    <small>caixas antigas preservam a regra gravada nelas</small>
+  </div>
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Alterar regra futura</div></div>
+    <div class="card-body">
+      <form method="post" action="/admin/regras-caixa" data-dirty-check="true">
+        <div class="form-group">
+          <label>Quantidade de hidrometros por caixa nova</label>
+          <input type="number" name="quantidade_hidrometros" min="1" max="100" value="{{ regra_ativa.quantidade_hidrometros }}" required>
+        </div>
+        <div class="form-group">
+          <label>Justificativa</label>
+          <textarea name="justificativa" required placeholder="Motivo operacional da alteracao"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Confirmacao</label>
+          <input type="text" name="confirmacao" placeholder="Digite ALTERAR" required>
+        </div>
+        <button type="submit" class="btn btn-danger">Alterar regra</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Historico</div></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for regra in historico %}
+        <article class="enterprise-mini-card">
+          <div class="enterprise-mini-head">
+            <span class="badge {{ 'badge-success' if regra.ativo else 'badge-secondary' }}">{{ 'Ativa' if regra.ativo else 'Inativa' }}</span>
+            <span class="text-muted">#{{ regra.id }}</span>
+          </div>
+          <strong>{{ regra.quantidade_hidrometros }} hidrometros</strong>
+          <div class="text-muted">{{ regra.vigente_desde|datetime_br_seconds }}</div>
+          <small class="text-muted">{{ regra.criado_por.nome if regra.criado_por else 'Sistema' }}</small>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhuma regra registrada.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

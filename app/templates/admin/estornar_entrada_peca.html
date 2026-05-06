@@ -1,0 +1,69 @@
+{% extends "shared/base.html" %}
+{% block title %}Estornar Entrada de Peca{% endblock %}
+{% block page_title %}Estornar Entrada Manual{% endblock %}
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<div class="page-intro mb-4">
+  <div>
+    <h2>Correcao administrativa de estoque</h2>
+    <p>Use este fluxo quando uma entrada manual for registrada com quantidade errada. O sistema cria o estorno e preserva a trilha de auditoria.</p>
+  </div>
+  <div class="page-intro-badge">Admin</div>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card">
+    <span>Movimento</span>
+    <strong>#{{ movimento.id }}</strong>
+    <small>{{ movimento.criado_em|datetime_br_seconds }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Peca</span>
+    <strong>{{ movimento.tipo_peca.nome if movimento.tipo_peca else "-" }}</strong>
+    <small>{{ movimento.quantidade }} unidade(s)</small>
+  </div>
+  <div class="summary-card">
+    <span>Estoque atual</span>
+    <strong>{{ movimento.tipo_peca.estoque.quantidade_atual if movimento.tipo_peca and movimento.tipo_peca.estoque else 0 }}</strong>
+    <small>{{ movimento.registrado_por.nome if movimento.registrado_por else "Sem responsavel" }}</small>
+  </div>
+</div>
+
+<div style="max-width: 760px;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Confirmacao em duas etapas</div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="/admin/pecas/movimentacoes/{{ movimento.id }}/estornar-entrada" data-dirty-check="true">
+        <input type="hidden" name="next_path" value="{{ next_path or '' }}">
+        <div class="context-disabled-card mb-3">
+          <strong>Impacto do estorno</strong>
+          <span>O saldo atual sera reduzido em {{ movimento.quantidade }} unidade(s) e um novo movimento de correcao sera gerado para rastreabilidade.</span>
+        </div>
+
+        <div class="form-group">
+          <label>Justificativa obrigatoria</label>
+          <textarea name="justificativa" placeholder="Explique por que esta entrada precisa ser corrigida." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Digite o ID da movimentacao para confirmar</label>
+          <input type="text" name="confirmacao" data-expected="{{ movimento.id }}" class="confirm-match" placeholder="{{ movimento.id }}" required>
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" name="confirmacao_final" value="1" required>
+          <span>Confirmo que revisei o saldo e desejo estornar esta entrada manual.</span>
+        </label>
+
+        <div class="form-actions mt-3">
+          <button type="submit" class="btn btn-danger" data-confirm="Confirmar o estorno da entrada #{{ movimento.id }}?">Estornar entrada</button>
+          <a href="{{ next_path or '/almoxarifado/estoque' }}" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas neste estorno. Deseja voltar ao estoque?">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

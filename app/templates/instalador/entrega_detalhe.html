@@ -1,0 +1,104 @@
+{% extends "shared/base.html" %}
+{% block title %}Entrega #{{ solicitacao.id }}{% endblock %}
+{% block page_title %}Entrega #{{ solicitacao.id }}{% endblock %}
+
+{% block content %}
+{% set recebimento = solicitacao.recebimento_instalador_status or ('pendente' if solicitacao.status.value == 'entregue' else '-') %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+{% if request.query_params.get("confirmado") %}<div class="alert alert-success">Recebimento confirmado.</div>{% endif %}
+{% if request.query_params.get("divergencia") %}<div class="alert alert-warning">Divergencia registrada para o almoxarifado.</div>{% endif %}
+
+<section class="installer-hero mb-4">
+  <div>
+    <span class="executive-kicker">Conferencia detalhada</span>
+    <h2>Solicitacao #{{ solicitacao.id }}</h2>
+    <p class="text-muted">Confira caixas, hidrometros e pecas antes de responder.</p>
+  </div>
+  {% if recebimento == 'confirmado' %}
+  <span class="badge badge-success">Confirmado</span>
+  {% elif recebimento == 'divergencia' %}
+  <span class="badge badge-warning">Divergencia</span>
+  {% else %}
+  <span class="badge badge-info">Pendente</span>
+  {% endif %}
+</section>
+
+{% include "instalador/_admin_preview_nav.html" %}
+
+<div class="installer-stack">
+  <section class="card">
+    <div class="card-header"><div class="card-title">Resumo</div></div>
+    <div class="card-body">
+      <div class="installer-info-list">
+        <div><span>Solicitada em</span><strong>{{ solicitacao.criado_em|datetime_br }}</strong></div>
+        <div><span>Entregue em</span><strong>{{ solicitacao.entregue_em|datetime_br if solicitacao.entregue_em else '-' }}</strong></div>
+        <div><span>Manipulador</span><strong>{{ solicitacao.criado_por.nome if solicitacao.criado_por else '-' }}</strong></div>
+        <div><span>Almoxarifado</span><strong>{{ solicitacao.entregue_por.nome if solicitacao.entregue_por else '-' }}</strong></div>
+      </div>
+      {% if solicitacao.observacoes %}
+      <div class="audit-description mt-3">{{ solicitacao.observacoes }}</div>
+      {% endif %}
+      {% if solicitacao.motivo_divergencia_instalador %}
+      <div class="alert alert-warning mt-3">{{ solicitacao.motivo_divergencia_instalador }}</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><div class="card-title">Caixas e hidrometros</div></div>
+    <div class="card-body stack">
+      {% for item in solicitacao.itens_caixa %}
+      <div class="installer-item-block">
+        <strong>{{ item.caixa.numero_interno if item.caixa else 'Caixa pendente' }}</strong>
+        {% if item.caixa %}
+        <span class="text-muted">Serial {{ item.caixa.serial_number }}</span>
+        <div class="chip-grid mt-2">
+          {% for h in get_caixa_hidrometros(item.caixa) %}
+          <span class="chip">{{ h.numero_serie }}</span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <span class="text-muted">Quantidade solicitada: {{ item.quantidade_solicitada }}</span>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="text-muted">Nenhuma caixa vinculada.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><div class="card-title">Pecas</div></div>
+    <div class="card-body stack">
+      {% for item in solicitacao.itens_peca %}
+      <div class="installer-row">
+        <strong>{{ item.tipo_peca.nome }}</strong>
+        <span>{{ item.quantidade_solicitada }} {{ item.tipo_peca.unidade_medida }}</span>
+      </div>
+      {% else %}
+      <p class="text-muted">Nenhuma peca vinculada.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if solicitacao.status.value == 'entregue' and recebimento == 'pendente' %}
+  <section class="card">
+    <div class="card-header"><div class="card-title">Resposta do recebimento</div></div>
+    <div class="card-body stack">
+      <form method="post" action="/instalador/entregas/{{ solicitacao.id }}/confirmar{{ portal_query }}">
+        <button type="submit" class="btn btn-success btn-lg btn-full">Confirmar recebimento</button>
+      </form>
+      <form method="post" action="/instalador/entregas/{{ solicitacao.id }}/divergencia{{ portal_query }}" data-dirty-check="true">
+        <div class="form-group">
+          <label>Motivo da divergencia *</label>
+          <textarea name="motivo" required placeholder="Descreva o que nao confere na entrega."></textarea>
+        </div>
+        <button type="submit" class="btn btn-warning btn-lg btn-full">Recusar / apontar divergencia</button>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  <a href="/instalador/entregas{{ portal_query }}" class="btn btn-secondary btn-lg">Voltar</a>
+</div>
+{% endblock %}

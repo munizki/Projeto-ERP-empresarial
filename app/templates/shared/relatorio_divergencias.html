@@ -1,0 +1,71 @@
+{% extends "shared/base.html" %}
+{% block title %}Relatorio - Divergencias{% endblock %}
+{% block page_title %}&#9888; Divergencias{% endblock %}
+
+{% block content %}
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Divergencias de conferencia</h2>
+    <p>Relatorio para apurar diferencas entre o sistema e a contagem real em campo.</p>
+  </div>
+  <div class="page-intro-badge">{{ conferencias|length }} registro(s)</div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/relatorios" class="btn btn-outline btn-sm">Relatorios</a>
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+</div>
+
+{% if not conferencias %}
+<div class="empty-state"><p>Nenhuma conferencia com divergencia registrada.</p></div>
+{% endif %}
+
+{% for c in conferencias %}
+<div class="card mb-3">
+  <div class="card-header">
+    <div class="card-title"><span class="badge badge-danger">Divergencia</span> {{ c.instalador.nome }}</div>
+    <div class="inline-actions">
+      <span class="text-muted">{{ c.data_conferencia|datetime_br }} - {{ c.responsavel.nome }}</span>
+      {% if is_admin(usuario) and can_use_advanced_mode(request, usuario) %}
+      <a href="/admin/conferencias/{{ c.id }}/reverter" class="btn btn-danger btn-sm no-print">Reverter</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card-body">
+    {% if c.observacoes %}
+    <div class="alert alert-warning mb-3">{{ c.observacoes }}</div>
+    {% endif %}
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Peca</th>
+            <th>Sistema</th>
+            <th>Real</th>
+            <th>Diferenca</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in c.itens %}
+          <tr class="{{ 'row-highlight' if item.diferenca != 0 else '' }}">
+            <td>{{ item.tipo_peca.nome }}</td>
+            <td>{{ item.quantidade_sistema }}</td>
+            <td>{{ item.quantidade_real }}</td>
+            <td>
+              {% if item.diferenca > 0 %}
+              <span class="text-warning fw-bold">+{{ item.diferenca }}</span>
+              {% elif item.diferenca < 0 %}
+              <span class="text-danger fw-bold">{{ item.diferenca }}</span>
+              {% else %}
+              <span class="text-success">0</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

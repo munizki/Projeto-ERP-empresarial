@@ -1,0 +1,106 @@
+{% extends "shared/base.html" %}
+{% block title %}Nova Caixa{% endblock %}
+{% block page_title %}Cadastrar Nova Caixa{% endblock %}
+{% block content %}
+<div class="page-intro mb-4">
+  <div>
+    <h2>Uma caixa sempre sai completa</h2>
+  </div>
+  <div class="page-intro-badge">{{ quantidade_esperada }} hidrometros</div>
+</div>
+
+<div style="max-width:680px">
+  <div class="alert alert-info">
+    <strong>Regra ativa:</strong> cada caixa nova deve conter <strong>{{ quantidade_esperada }} hidrometros</strong>.
+    Informe o numero de serie individual de todos eles antes de salvar.
+  </div>
+  {% if hidrometros_soltos %}
+  <div class="alert alert-warning">
+    <strong>Prioridade de reutilizacao:</strong> existem hidrometros soltos retornados de assistencia.
+    Use a serie deles nos campos abaixo quando fizer sentido operacional.
+  </div>
+  <div class="card mb-3">
+    <div class="card-header"><div class="card-title">Sugestao de reutilizacao</div></div>
+    <div class="card-body">
+      <div class="chip-grid">
+        {% for h in hidrometros_soltos %}
+        <span class="chip {{ 'chip-active' if h.prioridade_reutilizacao else '' }}" title="{{ h.observacao_prioridade or '' }}">
+          {{ h.numero_serie }}{% if h.prioridade_reutilizacao %} - Retornou da assistencia{% endif %}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Dados da caixa</div></div>
+    <div class="card-body">
+      {% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+      <form method="post" action="/almoxarifado/caixas/nova" id="form-caixa" data-dirty-check="true">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Serial number da fabrica *</label>
+            <input type="text" name="serial_number" required placeholder="SN da caixa" style="text-transform:uppercase" data-scanner-field="true" autocomplete="off" autocapitalize="characters" spellcheck="false" autofocus>
+            <span class="text-muted">Numero de serie gravado pela fabrica</span>
+          </div>
+          <div class="form-group">
+            <label>Numero interno *</label>
+            <input type="text" name="numero_interno" required placeholder="Controle interno da empresa" data-scanner-field="true" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            <span class="text-muted">Identificacao usada no fluxo operacional</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div style="margin-bottom:12px">
+          <strong>Series individuais dos {{ quantidade_esperada }} hidrometros</strong>
+          <p class="text-muted" style="margin-top:4px">
+            Digite uma serie unica por campo. O sistema bloqueia duplicidade antes de salvar.
+          </p>
+        </div>
+
+        <div class="hidro-grid">
+          {% for i in range(1, quantidade_esperada + 1) %}
+          <div class="hidro-item">
+            <label>Hidrometro {{ i }} *</label>
+            <input type="text" name="hidrometro_{{ i }}" required placeholder="Serie do hidrometro {{ i }}" autocomplete="off" data-scanner-field="true" autocapitalize="characters" spellcheck="false">
+          </div>
+          {% endfor %}
+        </div>
+
+        <hr class="divider">
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="btn-salvar">Cadastrar caixa completa</button>
+          <a href="/almoxarifado/caixas" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas no cadastro da caixa. Deseja voltar para a lista?">Voltar para caixas</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById("form-caixa").addEventListener("submit", function (event) {
+  const quantidadeEsperada = Number("{{ quantidade_esperada }}");
+  const campos = Array.from({ length: quantidadeEsperada }, function (_, index) {
+    return "hidrometro_" + (index + 1);
+  });
+  const valores = campos
+    .map(function (campo) { return document.querySelector('[name="' + campo + '"]').value.trim().toUpperCase(); })
+    .filter(function (valor) { return valor; });
+
+  const unicos = new Set(valores);
+  if (unicos.size !== valores.length) {
+    event.preventDefault();
+    alert("Erro: existem hidrometros com a mesma serie. Corrija antes de salvar.");
+    return false;
+  }
+
+  document.getElementById("btn-salvar").textContent = "Salvando...";
+  document.getElementById("btn-salvar").disabled = true;
+});
+</script>
+{% endblock %}

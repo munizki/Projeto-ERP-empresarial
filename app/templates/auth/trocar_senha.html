@@ -1,0 +1,43 @@
+{# app/templates/auth/trocar_senha.html #}
+{% extends "shared/base.html" %}
+{% block title %}Trocar Senha{% endblock %}
+{% block page_title %}Trocar Senha{% endblock %}
+
+{% block content %}
+<div class="page-intro mb-4">
+  <div>
+    <h2>Seguranca simples e direta</h2>
+    <p>Atualize sua senha antes da implantacao para reduzir risco de acesso indevido no uso diario.</p>
+  </div>
+  <div class="page-intro-badge">Conta</div>
+</div>
+
+<div style="max-width:480px">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Alterar senha</div></div>
+    <div class="card-body">
+      {% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+      {% if sucesso %}<div class="alert alert-success">{{ sucesso }}</div>{% endif %}
+
+      <form method="post" action="/auth/trocar-senha" data-dirty-check="true">
+        <div class="form-group">
+          <label>Senha atual</label>
+          <input type="password" name="senha_atual" required>
+        </div>
+        <div class="form-group">
+          <label>Nova senha</label>
+          <input type="password" name="nova_senha" required minlength="12">
+        </div>
+        <div class="form-group">
+          <label>Confirmar nova senha</label>
+          <input type="password" name="confirmar_senha" required minlength="12">
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Salvar senha</button>
+          <a href="/dashboard" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas na troca de senha. Deseja voltar ao dashboard?">Voltar ao dashboard</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

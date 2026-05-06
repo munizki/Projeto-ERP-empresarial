@@ -1,0 +1,109 @@
+{% extends "shared/base.html" %}
+{% block title %}Instaladores{% endblock %}
+{% block page_title %}&#128119; Instaladores{% endblock %}
+
+{% block content %}
+{% set total_pendentes = namespace(value=0) %}
+{% for i in instaladores %}
+  {% set total_pendentes.value = total_pendentes.value + (get_instalador_hidrometros(i) | selectattr('status.value', 'eq', 'com_instalador') | list | length) %}
+{% endfor %}
+
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Instaladores e materiais em campo</h2>
+  </div>
+  <div class="page-intro-badge">{{ instaladores|length }} ativo(s)</div>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card section-card section-manip">
+    <span>Instaladores</span>
+    <strong>{{ instaladores|length }}</strong>
+    <small>Cadastros ativos</small>
+  </div>
+  <div class="summary-card section-card section-warning">
+    <span>Pendentes</span>
+    <strong>{{ total_pendentes.value }}</strong>
+    <small>Hidrometros aguardando baixa</small>
+  </div>
+  <div class="summary-card section-card section-info">
+    <span>Exportacao</span>
+    <strong>PDF / XLSX</strong>
+    <small>Pronto para imprimir</small>
+  </div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/manipulador/instaladores/exportar.xlsx" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+  <a href="/manipulador/solicitacoes/nova" class="btn btn-primary btn-sm">Nova solicitacao</a>
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Instalador</th>
+          <th>Matricula</th>
+          <th>Caixas em posse</th>
+          <th>Hidrometros pendentes</th>
+          <th>Pecas em posse</th>
+          <th>Status</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in instaladores %}
+        {% set hidrometros = get_instalador_hidrometros(i) %}
+        {% set pendentes = hidrometros | selectattr('status.value', 'eq', 'com_instalador') | list %}
+        {% set instalados = hidrometros | selectattr('status.value', 'eq', 'instalado') | list %}
+        {% set caixas_count = (pendentes|length / 6) | int %}
+        <tr>
+          <td>
+            <strong>{{ i.nome }}</strong>
+            <div class="text-muted">{{ instalados|length }} instalado(s)</div>
+          </td>
+          <td><span class="badge badge-secondary">{{ i.matricula }}</span></td>
+          <td>
+            <span class="badge {{ 'badge-warning' if caixas_count > 0 else 'badge-secondary' }}">
+              {{ caixas_count }} caixa(s)
+            </span>
+          </td>
+          <td>
+            <span class="badge {{ 'badge-warning' if pendentes|length > 0 else 'badge-success' }}">
+              {{ pendentes|length }} pendente(s)
+            </span>
+          </td>
+          <td>
+            {% if i.pecas_posse %}
+              {% for pp in i.pecas_posse if pp.quantidade > 0 %}
+                <span class="badge badge-info">{{ pp.tipo_peca.nome }}: {{ pp.quantidade }}</span>
+              {% else %}
+                <span class="text-muted">Nenhuma</span>
+              {% endfor %}
+            {% else %}
+              <span class="text-muted">Nenhuma</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if i.ativo %}<span class="badge badge-success">Ativo</span>
+            {% else %}<span class="badge badge-secondary">Inativo</span>{% endif %}
+          </td>
+          <td>
+            <div class="table-actions">
+              <a href="/manipulador/instaladores/{{ i.id }}" class="btn btn-sm btn-info">Detalhe</a>
+              <a href="/manipulador/solicitacoes/nova?instalador_id={{ i.id }}" class="btn btn-sm btn-primary">Solicitar</a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted" style="padding:32px">
+          Nenhum instalador ativo cadastrado.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

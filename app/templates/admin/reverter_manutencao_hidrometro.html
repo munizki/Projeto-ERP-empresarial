@@ -1,0 +1,100 @@
+{% extends "shared/base.html" %}
+{% block title %}Reverter Manutencao{% endblock %}
+{% block page_title %}Reverter Manutencao de Hidrometro{% endblock %}
+
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+{% set hidrometro = manutencao.hidrometro %}
+<div class="page-intro mb-4">
+  <div>
+    <h2>Reversao administrativa de manutencao</h2>
+    <p>Use somente para corrigir erro operacional identificado. A reversao fica registrada na auditoria e no historico da manutencao.</p>
+  </div>
+  <div class="page-intro-badge">Admin</div>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card">
+    <span>Serie</span>
+    <strong class="mono">{{ hidrometro.numero_serie if hidrometro else "-" }}</strong>
+    <small>Confirmacao obrigatoria</small>
+  </div>
+  <div class="summary-card">
+    <span>Status manutencao</span>
+    <strong>{{ manutencao.status }}</strong>
+    <small>{{ manutencao.data_abertura|datetime_br_seconds }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Caixa origem</span>
+    <strong>{{ manutencao.caixa_origem.numero_interno if manutencao.caixa_origem else "-" }}</strong>
+    <small>
+      {% if manutencao.caixa_origem %}
+      {{ humanize_status(manutencao.caixa_origem.status) }}
+      {% else %}
+      Hidrometro solto
+      {% endif %}
+    </small>
+  </div>
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Destino seguro</div></div>
+    <div class="card-body">
+      <div class="context-disabled-card mb-3">
+        <strong>Regra de retorno para caixa</strong>
+        <span>A volta para a caixa de origem so fica disponivel quando a caixa esta ativa, em estoque e ainda possui vaga.</span>
+      </div>
+      <div class="summary-list">
+        <div><span>Motivo original</span><strong>{{ manutencao.motivo }}</strong></div>
+        <div><span>Descricao</span><strong>{{ manutencao.descricao_problema }}</strong></div>
+        <div><span>Aberta por</span><strong>{{ manutencao.criado_por_usuario.nome if manutencao.criado_por_usuario else "-" }}</strong></div>
+        <div>
+          <span>Voltar para caixa</span>
+          <strong>{{ "Liberado" if pode_voltar_caixa else "Bloqueado" }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Confirmacao em duas etapas</div></div>
+    <div class="card-body">
+      <form method="post" action="/admin/manutencoes/{{ manutencao.id }}/reverter" data-dirty-check="true">
+        <input type="hidden" name="next_path" value="{{ next_path or '' }}">
+
+        <div class="form-group">
+          <label>Destino da reversao</label>
+          <select name="destino" required>
+            <option value="{{ REVERSAO_DESTINO_ESTOQUE_SOLTO }}">Estoque solto do almoxarifado</option>
+            {% if pode_voltar_caixa %}
+            <option value="{{ REVERSAO_DESTINO_CAIXA_ORIGEM }}">Retornar para caixa de origem em estoque</option>
+            {% endif %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Justificativa obrigatoria</label>
+          <textarea name="justificativa" placeholder="Explique o erro operacional que precisa ser corrigido." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Digite ou leia o serial do hidrometro para confirmar</label>
+          <input type="text" name="confirmacao_serial" data-expected="{{ hidrometro.numero_serie if hidrometro else '' }}" class="confirm-match" data-scanner-field="true" placeholder="{{ hidrometro.numero_serie if hidrometro else '' }}" required autocomplete="off" autocapitalize="characters" spellcheck="false">
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" name="confirmacao_reversao" value="1" required>
+          <span>Confirmo que revisei o destino e desejo reverter esta manutencao com auditoria critica.</span>
+        </label>
+
+        <div class="form-actions mt-3">
+          <button type="submit" class="btn btn-danger" data-confirm="Confirmar a reversao da manutencao do hidrometro {{ hidrometro.numero_serie if hidrometro else '' }}?">Reverter manutencao</button>
+          <a href="{{ next_path or '/admin/reversoes' }}" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas nesta reversao administrativa. Deseja sair mesmo assim?">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "shared/base.html" %}
+{% block title %}Entrada de Pecas{% endblock %}
+{% block page_title %}Registrar Entrada de Pecas{% endblock %}
+
+{% block content %}
+<div class="page-intro mb-4">
+  <div>
+    <h2>Reforco de estoque</h2>
+    <p>Registre a entrada com quantidade positiva e uma observacao de referencia para facilitar auditoria e rastreabilidade.</p>
+  </div>
+</div>
+
+<div style="max-width: 560px;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Dados da entrada</div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="/almoxarifado/pecas/entrada" data-dirty-check="true">
+        <div class="form-group">
+          <label>Tipo de peca</label>
+          <select name="tipo_peca_id" required>
+            <option value="">Selecione</option>
+            {% for t in tipos %}
+            <option value="{{ t.id }}">{{ t.nome }} ({{ t.unidade_medida }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quantidade</label>
+          <input type="number" name="quantidade" min="1" step="1" required>
+        </div>
+        <div class="form-group">
+          <label>Observacoes</label>
+          <textarea name="observacoes" placeholder="Ex: nota fiscal, fornecedor, lote ou observacao da entrada"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-success">Registrar entrada</button>
+          <a href="/almoxarifado/estoque" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas nesta entrada. Deseja voltar ao estoque?">Voltar ao estoque</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

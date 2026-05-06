@@ -1,0 +1,76 @@
+{% extends "shared/base.html" %}
+{% block title %}Nova Solicitacao{% endblock %}
+{% block page_title %}Nova Solicitacao de Materiais{% endblock %}
+
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<div class="page-intro mb-4">
+  <div>
+    <h2>Solicite apenas o necessario para a operacao</h2>
+    <p>O sistema valida quantidade de caixas em estoque e pecas disponiveis antes de criar a solicitacao.</p>
+  </div>
+  <div class="page-intro-badge">{{ total_caixas_estoque }} caixa(s) livres</div>
+</div>
+
+<div class="wizard-steps" style="max-width: 760px;">
+  <div class="wizard-step"><strong>1</strong><div><span>Instalador</span><b>Selecionar equipe</b></div></div>
+  <div class="wizard-step"><strong>2</strong><div><span>Materiais</span><b>Estoque validado</b></div></div>
+  <div class="wizard-step"><strong>3</strong><div><span>Solicitar</span><b>Fila guiada</b></div></div>
+</div>
+
+<div style="max-width: 760px;">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Dados da solicitacao</div></div>
+    <div class="card-body">
+      <form method="post" action="/manipulador/solicitacoes/nova" data-dirty-check="true">
+        <div class="form-group">
+          <label>Instalador</label>
+          <select name="instalador_id" required>
+            <option value="">Selecione o instalador</option>
+            {% for i in instaladores %}
+            <option value="{{ i.id }}" {{ 'selected' if request.query_params.get('instalador_id') == i.id|string else '' }}>
+              {{ i.nome }} - {{ i.matricula }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="section-caption">Caixas de hidrometros</div>
+        <div class="form-group">
+          <label>Quantidade de caixas</label>
+          <input type="number" name="qtd_caixas" min="0" max="{{ total_caixas_estoque }}" value="0">
+          <span class="field-hint">Cada caixa entrega automaticamente os hidrometros cadastrados naquela caixa.</span>
+        </div>
+
+        <hr class="divider">
+        <div class="section-caption">Pecas</div>
+
+        {% if tipos_pecas %}
+        <div class="grid-2">
+          {% for tipo in tipos_pecas %}
+          <div class="form-group">
+            <label>{{ tipo.nome }} ({{ tipo.unidade_medida }})</label>
+            <input type="number" name="peca_{{ tipo.id }}" min="0" max="{{ tipo.estoque.quantidade_atual if tipo.estoque else 0 }}" value="0">
+            <span class="field-hint">{{ tipo.estoque.quantidade_atual if tipo.estoque else 0 }} disponivel(is)</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted">Nenhum tipo de peca cadastrado pelo administrador.</p>
+        {% endif %}
+
+        <div class="form-group">
+          <label>Observacoes</label>
+          <textarea name="observacoes" placeholder="Ex: frente de servico, urgencia, observacao para separacao"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Criar solicitacao</button>
+          <a href="/manipulador/solicitacoes" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas nesta solicitacao. Deseja voltar para a lista?">Voltar para solicitacoes</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

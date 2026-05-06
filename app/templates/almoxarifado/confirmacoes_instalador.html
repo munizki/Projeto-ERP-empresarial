@@ -1,0 +1,127 @@
+{% extends "shared/base.html" %}
+{% block title %}Confirmacoes do Instalador{% endblock %}
+{% block page_title %}Confirmacoes do Instalador{% endblock %}
+
+{% block content %}
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Recebimento conferido pelo instalador</h2>
+    <p>Acompanhe entregas confirmadas, pendentes e com divergencia sem travar a operacao do almoxarifado.</p>
+  </div>
+  <div class="page-intro-badge">{{ resumo.total }} entrega(s)</div>
+</div>
+
+<div class="executive-band mb-4">
+  <div class="executive-band-item"><span>Total</span><strong>{{ resumo.total }}</strong></div>
+  <div class="executive-band-item"><span>Pendentes</span><strong>{{ resumo.pendente }}</strong></div>
+  <div class="executive-band-item"><span>Confirmadas</span><strong>{{ resumo.confirmado }}</strong></div>
+  <div class="executive-band-item"><span>Divergencias</span><strong>{{ resumo.divergencia }}</strong></div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/almoxarifado/confirmacoes-instalador" class="btn btn-sm {{ 'btn-primary' if not filtros.status_recebimento else 'btn-outline' }}">Todas</a>
+  <a href="/almoxarifado/confirmacoes-instalador?status_recebimento=pendente" class="btn btn-sm {{ 'btn-warning' if filtros.status_recebimento == 'pendente' else 'btn-outline' }}">Pendentes</a>
+  <a href="/almoxarifado/confirmacoes-instalador?status_recebimento=confirmado" class="btn btn-sm {{ 'btn-success' if filtros.status_recebimento == 'confirmado' else 'btn-outline' }}">Confirmadas</a>
+  <a href="/almoxarifado/confirmacoes-instalador?status_recebimento=divergencia" class="btn btn-sm {{ 'btn-danger' if filtros.status_recebimento == 'divergencia' else 'btn-outline' }}">Divergencias</a>
+  <a href="/almoxarifado/confirmacoes-instalador/exportar.xlsx?status_recebimento={{ filtros.status_recebimento }}&instalador_id={{ filtros.instalador_id }}&data_inicio={{ filtros.data_inicio }}&data_fim={{ filtros.data_fim }}" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+</div>
+
+<form method="get" action="/almoxarifado/confirmacoes-instalador" class="inline-form mb-3 no-print">
+  <div class="form-group">
+    <label>Status</label>
+    <select name="status_recebimento">
+      <option value="" {{ 'selected' if not filtros.status_recebimento }}>Todos</option>
+      <option value="pendente" {{ 'selected' if filtros.status_recebimento == 'pendente' }}>Pendente</option>
+      <option value="confirmado" {{ 'selected' if filtros.status_recebimento == 'confirmado' }}>Confirmado</option>
+      <option value="divergencia" {{ 'selected' if filtros.status_recebimento == 'divergencia' }}>Divergencia</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Instalador</label>
+    <select name="instalador_id">
+      <option value="0">Todos</option>
+      {% for instalador in instaladores %}
+      <option value="{{ instalador.id }}" {{ 'selected' if filtros.instalador_id == instalador.id }}>{{ instalador.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Entrega de</label>
+    <input type="date" name="data_inicio" value="{{ filtros.data_inicio }}">
+  </div>
+  <div class="form-group">
+    <label>Entrega ate</label>
+    <input type="date" name="data_fim" value="{{ filtros.data_fim }}">
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+</form>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Solicitacao</th>
+          <th>Instalador</th>
+          <th>Recebimento</th>
+          <th>Entrega</th>
+          <th>Itens</th>
+          <th>Responsaveis</th>
+          <th>Divergencia</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in solicitacoes %}
+        {% set recebimento = s.recebimento_instalador_status or 'pendente' %}
+        {% set total_hidros = namespace(valor=0) %}
+        {% for item in s.itens_caixa %}
+          {% set total_hidros.valor = total_hidros.valor + (get_caixa_hidrometros(item.caixa)|length if item.caixa else 0) %}
+        {% endfor %}
+        <tr>
+          <td class="text-muted">#{{ s.id }}</td>
+          <td>
+            <strong>{{ s.instalador.nome if s.instalador else '-' }}</strong>
+            <div class="text-muted">{{ s.instalador.matricula if s.instalador else '-' }}</div>
+          </td>
+          <td>
+            {% if recebimento == 'confirmado' %}
+            <span class="badge badge-success">Confirmado</span>
+            {% elif recebimento == 'divergencia' %}
+            <span class="badge badge-danger">Divergencia</span>
+            {% else %}
+            <span class="badge badge-warning">Pendente</span>
+            {% endif %}
+            <div class="text-muted">{{ s.confirmacao_instalador_em|datetime_br if s.confirmacao_instalador_em else 'Aguardando resposta' }}</div>
+          </td>
+          <td>
+            <strong>{{ s.entregue_em|datetime_br if s.entregue_em else '-' }}</strong>
+            <div class="text-muted">Criada {{ s.criado_em|datetime_br }}</div>
+          </td>
+          <td>
+            <div>{{ s.itens_caixa|length }} caixa(s), {{ total_hidros.valor }} hidrometro(s)</div>
+            <div class="text-muted">
+              {% for item in s.itens_peca %}
+              {{ item.tipo_peca.nome }}: {{ item.quantidade_solicitada }}{% if not loop.last %}, {% endif %}
+              {% else %}Sem pecas{% endfor %}
+            </div>
+          </td>
+          <td>
+            <div>Manipulador: {{ s.criado_por.nome if s.criado_por else '-' }}</div>
+            <div class="text-muted">Almoxarifado: {{ s.entregue_por.nome if s.entregue_por else '-' }}</div>
+          </td>
+          <td>
+            {% if s.motivo_divergencia_instalador %}
+            <span class="text-danger fw-bold">{{ s.motivo_divergencia_instalador }}</span>
+            {% else %}
+            <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted" style="padding:30px">Nenhuma entrega encontrada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

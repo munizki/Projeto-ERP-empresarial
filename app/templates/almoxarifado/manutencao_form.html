@@ -1,0 +1,69 @@
+{% extends "shared/base.html" %}
+{% block title %}Enviar para manutencao{% endblock %}
+{% block page_title %}Manutencao de Hidrometro{% endblock %}
+
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<div class="maintenance-form-shell">
+  <div class="maintenance-hero mb-4">
+    <div>
+      <span class="eyebrow">Abertura tecnica</span>
+      <h2>{{ hidrometro.numero_serie }}</h2>
+      <p>O hidrometro ficara indisponivel ate a decisao final do almoxarifado ou admin.</p>
+    </div>
+    <div class="maintenance-hero-actions">
+      <span class="badge badge-info">{{ humanize_status(hidrometro.status) }}</span>
+      <a href="{{ safe_back_href(request, '/almoxarifado/caixas') }}" class="btn btn-secondary btn-sm">Voltar</a>
+    </div>
+  </div>
+
+  <div class="maintenance-form-layout">
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Dados atuais</div>
+          <div class="text-muted">Conferencia antes da retirada do fluxo operacional.</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="maintenance-fact-list">
+          <div><span>Serie</span><strong class="mono">{{ hidrometro.numero_serie }}</strong></div>
+          <div><span>Caixa atual</span><strong>{% if hidrometro.caixa %}{{ hidrometro.caixa.numero_interno }}{% else %}Sem caixa{% endif %}</strong></div>
+          <div><span>Instalador atual</span><strong>{{ hidrometro.instalador_atual.nome if hidrometro.instalador_atual else "-" }}</strong></div>
+          <div><span>Status</span><strong>{{ humanize_status(hidrometro.status) }}</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Registrar problema</div>
+          <div class="text-muted">Motivo e descricao ficam registrados na auditoria.</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/almoxarifado/hidrometros/{{ hidrometro.id }}/manutencao" data-dirty-check="true">
+          <div class="form-group">
+            <label>Motivo *</label>
+            <input type="text" name="motivo" required placeholder="Ex: vazamento, travado, leitura irregular">
+          </div>
+          <div class="form-group">
+            <label>Descricao do problema *</label>
+            <textarea name="descricao_problema" required placeholder="Descreva o defeito e o contexto em que foi identificado."></textarea>
+          </div>
+          <div class="maintenance-warning">
+            <strong>Impacto operacional</strong>
+            <span>A caixa segue seu fluxo normal e fica marcada como incompleta com rastreabilidade desta retirada.</span>
+          </div>
+          <div class="form-actions mt-3">
+            <button type="submit" class="btn btn-warning">Enviar para manutencao</button>
+            <a href="{{ safe_back_href(request, '/almoxarifado/caixas') }}" class="btn btn-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

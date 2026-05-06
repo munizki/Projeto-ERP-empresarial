@@ -1,0 +1,204 @@
+{% extends "shared/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Painel Operacional{% endblock %}
+
+{% block content %}
+{% if alertas_estoque %}
+<div class="alert alert-warning mb-4">
+  Pecas abaixo do minimo:
+  {% for e in alertas_estoque %}
+    <strong>{{ e.tipo_peca.nome }}</strong> ({{ e.quantidade_atual }} {{ e.tipo_peca.unidade_medida }}){% if not loop.last %}, {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<section class="dashboard-shell mb-4">
+  <div class="dashboard-kpi-grid">
+    <article class="dashboard-kpi-card teal">
+      <div class="dashboard-kpi-icon">📦</div>
+      <div class="dashboard-kpi-value">{{ total_caixas_estoque }}</div>
+      <div class="dashboard-kpi-label">Caixas em estoque</div>
+    </article>
+
+    <article class="dashboard-kpi-card amber">
+      <div class="dashboard-kpi-icon">🚚</div>
+      <div class="dashboard-kpi-value">{{ total_caixas_entregues }}</div>
+      <div class="dashboard-kpi-label">Caixas em campo</div>
+    </article>
+
+    <article class="dashboard-kpi-card blue">
+      <div class="dashboard-kpi-icon">💧</div>
+      <div class="dashboard-kpi-value">{{ total_hidros_estoque }}</div>
+      <div class="dashboard-kpi-label">Hidrometros livres</div>
+    </article>
+
+    <article class="dashboard-kpi-card green">
+      <div class="dashboard-kpi-icon">✅</div>
+      <div class="dashboard-kpi-value">{{ total_hidros_instalados }}</div>
+      <div class="dashboard-kpi-label">Instalados</div>
+    </article>
+
+    <article class="dashboard-kpi-card violet">
+      <div class="dashboard-kpi-icon">🧑‍🔧</div>
+      <div class="dashboard-kpi-value">{{ total_instaladores }}</div>
+      <div class="dashboard-kpi-label">Instaladores</div>
+    </article>
+
+    <article class="dashboard-kpi-card red">
+      <div class="dashboard-kpi-icon">⚠️</div>
+      <div class="dashboard-kpi-value">{{ conferencias_com_divergencia }}</div>
+      <div class="dashboard-kpi-label">Divergencias</div>
+    </article>
+  </div>
+</section>
+
+<section class="dashboard-action-section mb-4">
+  <div class="section-head">
+    <div><h3>Atalhos</h3></div>
+  </div>
+
+  <div class="dashboard-action-grid">
+    {% if usuario.role.value in ['manipulador', 'admin'] %}
+    <article class="dashboard-action-card cyan">
+      <div class="dashboard-action-emoji">📝</div>
+      <div class="dashboard-action-title">Nova solicitacao</div>
+      <div class="dashboard-action-buttons">
+        <a href="/manipulador/solicitacoes/nova" class="btn btn-solid-light btn-sm">Abrir</a>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card green">
+      <div class="dashboard-action-emoji">✅</div>
+      <div class="dashboard-action-title">Baixa</div>
+      <div class="dashboard-action-buttons">
+        <a href="/manipulador/baixa-hidrometro" class="btn btn-solid-light btn-sm">Abrir</a>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card blue">
+      <div class="dashboard-action-emoji">🔎</div>
+      <div class="dashboard-action-title">Rastrear</div>
+      <div class="dashboard-action-buttons">
+        <a href="/manipulador/rastrear" class="btn btn-solid-light btn-sm">Abrir</a>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card violet">
+      <div class="dashboard-action-emoji">👷</div>
+      <div class="dashboard-action-title">Instaladores</div>
+      <div class="dashboard-action-buttons">
+        <a href="/manipulador/instaladores" class="btn btn-solid-light btn-sm">Abrir</a>
+        <a href="/manipulador/instaladores/exportar.xlsx" class="btn btn-ghost-light btn-sm" download>Baixar</a>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card blue">
+      <div class="dashboard-action-emoji">&#128200;</div>
+      <div class="dashboard-action-title">Produtividade</div>
+      <div class="dashboard-action-buttons">
+        <a href="/produtividade" class="btn btn-solid-light btn-sm">Abrir</a>
+        {% if usuario.role.value == 'admin' %}
+        <a href="/produtividade/exportar.xlsx" class="btn btn-ghost-light btn-sm" download>Baixar</a>
+        {% endif %}
+      </div>
+    </article>
+    {% endif %}
+
+    {% if usuario.role.value in ['almoxarifado', 'admin'] %}
+    <article class="dashboard-action-card amber">
+      <div class="dashboard-action-emoji">📦</div>
+      <div class="dashboard-action-title">Caixas</div>
+      <div class="dashboard-action-buttons">
+        <a href="/almoxarifado/caixas" class="btn btn-solid-light btn-sm">Abrir</a>
+        <a href="/almoxarifado/caixas/exportar.xlsx" class="btn btn-ghost-light btn-sm" download>Baixar</a>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card slate">
+      <div class="dashboard-action-emoji">🛠️</div>
+      <div class="dashboard-action-title">Estoque</div>
+      <div class="dashboard-action-buttons">
+        <a href="/almoxarifado/estoque" class="btn btn-solid-light btn-sm">Abrir</a>
+        <a href="/almoxarifado/estoque/exportar.xlsx" class="btn btn-ghost-light btn-sm" download>Baixar</a>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card red">
+      <div class="dashboard-action-emoji">📬</div>
+      <div class="dashboard-action-title">Separacao</div>
+      <div class="dashboard-action-buttons">
+        <a href="/almoxarifado/solicitacoes" class="btn btn-solid-light btn-sm">Abrir</a>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card green">
+      <div class="dashboard-action-emoji">&#9851;</div>
+      <div class="dashboard-action-title">Carcacas</div>
+      <div class="dashboard-action-buttons">
+        <a href="/almoxarifado/carcacas" class="btn btn-solid-light btn-sm">Abrir</a>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card cyan">
+      <div class="dashboard-action-emoji">&#8644;</div>
+      <div class="dashboard-action-title">Transferencias</div>
+      <div class="dashboard-action-buttons">
+        <a href="/almoxarifado/transferencias" class="btn btn-solid-light btn-sm">Abrir</a>
+      </div>
+    </article>
+    {% endif %}
+
+    <article class="dashboard-action-card dark">
+      <div class="dashboard-action-emoji">💬</div>
+      <div class="dashboard-action-title">Feedback</div>
+      <div class="dashboard-action-buttons">
+        <a href="/feedback" class="btn btn-solid-light btn-sm">Abrir</a>
+      </div>
+    </article>
+
+    {% if usuario.role.value == 'admin' %}
+    <article class="dashboard-action-card violet">
+      <div class="dashboard-action-emoji">📊</div>
+      <div class="dashboard-action-title">Relatorios</div>
+      <div class="dashboard-action-buttons">
+        <a href="/relatorios" class="btn btn-solid-light btn-sm">Abrir</a>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card red">
+      <div class="dashboard-action-emoji">↺</div>
+      <div class="dashboard-action-title">Reversoes</div>
+      <div class="dashboard-action-buttons">
+        <a href="/admin/reversoes" class="btn btn-solid-light btn-sm">Abrir</a>
+      </div>
+    </article>
+    {% endif %}
+  </div>
+</section>
+
+<section class="dashboard-action-section">
+  <div class="section-head">
+    <div><h3>Ultimas movimentacoes</h3></div>
+  </div>
+
+  <div class="dashboard-timeline-grid">
+    {% for mov in movimentacoes_recentes %}
+    <article class="timeline-command-card">
+      <div class="timeline-command-head">
+        <span class="badge {% if mov.tipo.value == 'saida' %}badge-warning{% elif mov.tipo.value == 'entrada' %}badge-success{% elif mov.tipo.value == 'baixa' %}badge-info{% else %}badge-secondary{% endif %}">
+          {{ mov.tipo.value }}
+        </span>
+        <span class="timeline-command-time">{{ mov.criado_em|datetime_br_seconds }}</span>
+      </div>
+      <div class="timeline-command-meta">
+        <strong>{{ mov.caixa.numero_interno if mov.caixa else '-' }}</strong>
+        <span>{{ mov.instalador.nome if mov.instalador else 'Sem instalador' }}</span>
+        <span>{{ mov.registrado_por.nome if mov.registrado_por else 'Sistema' }}</span>
+      </div>
+    </article>
+    {% else %}
+    <div class="empty-state"><p>Nenhuma movimentacao registrada.</p></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

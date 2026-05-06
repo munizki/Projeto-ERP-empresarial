@@ -1,0 +1,96 @@
+{% extends "shared/base.html" %}
+{% block title %}Relatorio - Instaladores{% endblock %}
+{% block page_title %}&#128119; Relatorio por Instalador{% endblock %}
+
+{% block content %}
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Materiais e pendencias por instalador</h2>
+    <p>Leitura pronta para imprimir com foco em pendencias de campo e pecas em posse.</p>
+  </div>
+  <div class="page-intro-badge">{{ instaladores|length }} instalador(es)</div>
+</div>
+
+<div class="toolbar-strip mb-3 no-print">
+  <a href="/relatorios" class="btn btn-outline btn-sm">Relatorios</a>
+  <a href="/manipulador/instaladores/exportar.xlsx" class="btn btn-success btn-sm" download>Baixar XLSX</a>
+  <button onclick="window.print()" class="btn btn-secondary btn-sm">PDF</button>
+</div>
+
+{% if instaladores %}
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Instalador</th>
+          <th>Matricula</th>
+          <th>Pendentes</th>
+          <th>Instalados</th>
+          <th>Pecas em posse</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in instaladores %}
+        {% set hidrometros = get_instalador_hidrometros(i) %}
+        {% set pendentes = hidrometros | selectattr('status.value','eq','com_instalador') | list %}
+        {% set instalados = hidrometros | selectattr('status.value','eq','instalado') | list %}
+        <tr>
+          <td><strong>{{ i.nome }}</strong></td>
+          <td>{{ i.matricula }}</td>
+          <td><span class="badge {{ 'badge-warning' if pendentes|length else 'badge-success' }}">{{ pendentes|length }}</span></td>
+          <td><span class="badge badge-info">{{ instalados|length }}</span></td>
+          <td>
+            {% for pp in i.pecas_posse if pp.quantidade > 0 %}
+            <span class="badge badge-secondary">{{ pp.tipo_peca.nome }}: {{ pp.quantidade }}</span>
+            {% else %}
+            <span class="text-muted">Nenhuma</span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% for i in instaladores %}
+{% set hidrometros = get_instalador_hidrometros(i) %}
+{% set hidros_pendentes = hidrometros | selectattr('status.value','eq','com_instalador') | list %}
+<div class="card mt-3">
+  <div class="card-header">
+    <div class="card-title">{{ i.nome }} <span class="text-muted">{{ i.matricula }}</span></div>
+    <span class="badge badge-warning">{{ hidros_pendentes|length }} pendente(s)</span>
+  </div>
+  <div class="card-body">
+    <div class="section-grid">
+      <div>
+        <div class="detail-label">Hidrometros com o instalador</div>
+        {% if hidros_pendentes %}
+        <div class="chip-grid mt-3">
+          {% for h in hidros_pendentes %}
+          <span class="chip">{{ h.numero_serie }} - {{ h.caixa.numero_interno }}</span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted mt-3">Nenhum hidrometro pendente.</p>
+        {% endif %}
+      </div>
+      <div>
+        <div class="detail-label">Pecas em posse</div>
+        <div class="chip-grid mt-3">
+          {% for pp in i.pecas_posse if pp.quantidade > 0 %}
+          <span class="chip">{{ pp.tipo_peca.nome }} - {{ pp.quantidade }} {{ pp.tipo_peca.unidade_medida }}</span>
+          {% else %}
+          <span class="text-muted">Nenhuma peca em posse.</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state"><p>Nenhum instalador ativo.</p></div>
+{% endif %}
+{% endblock %}

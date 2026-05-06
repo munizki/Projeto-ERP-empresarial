@@ -1,0 +1,110 @@
+{% extends "shared/base.html" %}
+{% block title %}Feedback{% endblock %}
+{% block page_title %}Feedback Operacional{% endblock %}
+{% block topbar_actions %}
+{% if is_admin(usuario) %}
+<a href="/admin/feedbacks" class="btn btn-primary btn-sm">Fila admin</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('sucesso') %}
+<div class="alert alert-success">Feedback enviado com sucesso.</div>
+{% endif %}
+{% if erro_feedback %}
+<div class="alert alert-danger">{{ erro_feedback }}</div>
+{% endif %}
+
+<div class="page-intro page-intro-compact mb-4">
+  <div>
+    <h2>Feedback da operacao</h2>
+  </div>
+  <div class="page-intro-badge">{{ feedbacks|length }} envio(s)</div>
+</div>
+
+<div class="section-grid">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Novo feedback</div></div>
+    <div class="card-body">
+      <form method="post" action="/feedback" enctype="multipart/form-data" data-dirty-check="true">
+        <input type="hidden" name="pagina_origem" value="{{ request.url.path }}">
+        <div class="section-grid">
+          <div class="form-group">
+            <label>Area</label>
+            <div class="form-static">{{ usuario.role.value|capitalize }}</div>
+          </div>
+          <div class="form-group">
+            <label>Categoria</label>
+            <select name="categoria" required>
+              <option value="bug">Bug</option>
+              <option value="usabilidade">Usabilidade</option>
+              <option value="melhoria">Melhoria</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="checkbox-row mb-3">
+          <input type="checkbox" name="urgente" value="1">
+          <span>Marcar como urgente</span>
+        </label>
+
+        <div class="form-group">
+          <label>Titulo</label>
+          <input type="text" name="titulo" maxlength="160" placeholder="Ex.: botao confuso na entrega" required>
+        </div>
+
+        <div class="form-group">
+          <label>Mensagem</label>
+          <textarea name="mensagem" placeholder="Descreva o que aconteceu ou o que pode melhorar." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Anexos</label>
+          <input type="file" name="anexos" accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf" multiple>
+          <small class="text-muted">Opcional. Envie ate 3 arquivos PNG, JPG, WEBP ou PDF, com limite de 5 MB cada.</small>
+        </div>
+
+        <div class="form-actions mt-3">
+          <button type="submit" class="btn btn-primary">Enviar feedback</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Meus envios</div></div>
+    <div class="card-body">
+      <div class="enterprise-card-grid">
+        {% for feedback in feedbacks %}
+        <article class="enterprise-mini-card {% if feedback.urgente %}urgent{% endif %}">
+          <div class="enterprise-mini-head">
+            <div class="feedback-mini-badges">
+              <span class="badge {% if feedback.status.value == 'novo' %}badge-warning{% elif feedback.status.value == 'em_analise' %}badge-info{% else %}badge-success{% endif %}">
+                {{ feedback.status.value.replace('_', ' ') }}
+              </span>
+              {% if feedback.urgente %}
+              <span class="badge badge-danger">Urgente</span>
+              {% endif %}
+            </div>
+            <span class="text-muted">#{{ feedback.id }}</span>
+          </div>
+          <strong>{{ feedback.titulo }}</strong>
+          <div class="text-muted">{{ feedback.categoria|capitalize }} • {{ feedback.area|capitalize }}</div>
+          <p class="feedback-card-text">{{ feedback.mensagem }}</p>
+          {% if feedback.anexos %}
+          <div class="feedback-mini-badges">
+            {% for anexo in feedback.anexos %}
+            <span class="badge badge-secondary">{{ anexo.nome_original }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+          <small class="text-muted">{{ feedback.criado_em|datetime_br_seconds }}</small>
+        </article>
+        {% else %}
+        <div class="empty-state"><p>Nenhum feedback enviado ainda.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

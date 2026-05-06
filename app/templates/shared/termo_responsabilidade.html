@@ -1,0 +1,51 @@
+{% extends "shared/base.html" %}
+{% block title %}Termo Interno{% endblock %}
+{% block page_title %}Termo Interno{% endblock %}
+
+{% block content %}
+<section class="executive-hero executive-hero-relatorios mb-4">
+  <div class="executive-hero-main">
+    <span class="executive-kicker">&#128196; GMF</span>
+    <h2>Uso responsavel do sistema</h2>
+    <div class="executive-chip-row">
+      <span class="executive-chip">&#128274; Senha individual</span>
+      <span class="executive-chip">&#128221; Acoes auditadas</span>
+      <span class="executive-chip">&#9989; Conferencia obrigatoria</span>
+    </div>
+  </div>
+  <div class="executive-hero-metrics">
+    <div class="executive-metric-card"><span>Usuario</span><strong>{{ usuario.nome }}</strong></div>
+    <div class="executive-metric-card"><span>Perfil</span><strong>{{ usuario.role.value }}</strong></div>
+  </div>
+</section>
+
+<div class="report-command-grid">
+  <article class="report-command-card blue">
+    <div class="report-command-head"><div class="report-command-icon">&#128274;</div><span class="report-command-tag">Conta</span></div>
+    <div class="report-command-title">Nao compartilhar senha</div>
+  </article>
+  <article class="report-command-card amber">
+    <div class="report-command-head"><div class="report-command-icon">&#128230;</div><span class="report-command-tag">Operacao</span></div>
+    <div class="report-command-title">Conferir antes de confirmar</div>
+  </article>
+  <article class="report-command-card green">
+    <div class="report-command-head"><div class="report-command-icon">&#128221;</div><span class="report-command-tag">Auditoria</span></div>
+    <div class="report-command-title">Movimentacoes rastreadas</div>
+  </article>
+  <article class="report-command-card red">
+    <div class="report-command-head"><div class="report-command-icon">&#9888;</div><span class="report-command-tag">Erro</span></div>
+    <div class="report-command-title">Avisar divergencias</div>
+  </article>
+</div>
+
+<div class="card mt-4">
+  <div class="card-body">
+    <div class="summary-list">
+      <div><span>Responsabilidade</span><strong>Cada confirmacao operacional fica vinculada ao usuario logado.</strong></div>
+      <div><span>Dados</span><strong>O historico, auditoria e movimentacoes nao devem ser apagados fora dos fluxos autorizados.</strong></div>
+      <div><span>Seguranca</span><strong>Senhas sao pessoais e nao devem ser compartilhadas.</strong></div>
+      <div><span>Conferencia</span><strong>Caixas, pecas e hidrometros devem ser conferidos antes de confirmar qualquer etapa.</strong></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

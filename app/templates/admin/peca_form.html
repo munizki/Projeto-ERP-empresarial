@@ -1,0 +1,66 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ 'Editar' if editando else 'Novo' }} Tipo de Peca{% endblock %}
+{% block page_title %}{{ 'Editar' if editando else 'Novo' }} Tipo de Peca{% endblock %}
+{% block content %}
+<div class="page-intro mb-4">
+  <div>
+    <h2>Estoque configurado para a operacao</h2>
+    <p>Defina nome, unidade e alerta minimo para que o almoxarifado receba avisos antes da falta de material.</p>
+  </div>
+  <div class="page-intro-badge">Pecas</div>
+</div>
+
+<div style="max-width:560px">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Dados da peca</div></div>
+    <div class="card-body">
+      {% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+      <form method="post" action="{{ '/admin/pecas/' + editando.id|string + '/editar' if editando else '/admin/pecas/novo' }}" data-dirty-check="true">
+        <div class="form-group">
+          <label>Nome da peca *</label>
+          <input type="text" name="nome" value="{{ editando.nome if editando else '' }}" required placeholder="Ex: lacre, conector, vedacao">
+        </div>
+        <div class="form-group">
+          <label>Descricao</label>
+          <textarea name="descricao">{{ editando.descricao if editando else '' }}</textarea>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Unidade de medida</label>
+            <select name="unidade_medida">
+              <option value="unidade" {{ 'selected' if not editando or editando.unidade_medida == 'unidade' }}>Unidade</option>
+              <option value="metro" {{ 'selected' if editando and editando.unidade_medida == 'metro' }}>Metro</option>
+              <option value="kg" {{ 'selected' if editando and editando.unidade_medida == 'kg' }}>Kg</option>
+              <option value="litro" {{ 'selected' if editando and editando.unidade_medida == 'litro' }}>Litro</option>
+              <option value="caixa" {{ 'selected' if editando and editando.unidade_medida == 'caixa' }}>Caixa</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Estoque minimo (%)</label>
+            <input type="number" name="estoque_minimo_percentual" value="{{ editando.estoque_minimo_percentual|int if editando else 20 }}" min="0" max="100" step="1">
+            <span class="text-muted">O alerta entra quando o percentual atual ficar abaixo deste valor</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Quantidade maxima</label>
+          <input type="number" name="quantidade_maxima" value="{{ editando.estoque.quantidade_maxima if editando and editando.estoque else 100 }}" min="1">
+        </div>
+        {% if editando %}
+        <div class="form-group">
+          <label>Status</label>
+          <select name="ativo">
+            <option value="1" {{ 'selected' if editando.ativo }}>Ativo</option>
+            <option value="0" {{ 'selected' if not editando.ativo }}>Inativo</option>
+          </select>
+        </div>
+        {% endif %}
+        <hr class="divider">
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Salvar tipo de peca</button>
+          <a href="/admin/pecas" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas no cadastro da peca. Deseja voltar para a lista?">Voltar para pecas</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

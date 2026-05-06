@@ -1,0 +1,99 @@
+{% extends "shared/base.html" %}
+{% block title %}Relatorios{% endblock %}
+{% block page_title %}Relatorios{% endblock %}
+
+{% block content %}
+<section class="executive-hero executive-hero-relatorios mb-4">
+  <div class="executive-hero-main">
+    <span class="executive-kicker">GMF</span>
+    <h2>Central de relatorios</h2>
+    <div class="executive-chip-row">
+      <span class="executive-chip">PDF</span>
+      <span class="executive-chip">XLSX</span>
+      <span class="executive-chip">Modulos</span>
+    </div>
+  </div>
+  <div class="executive-hero-metrics">
+    <div class="executive-metric-card">
+      <span>Caixas</span>
+      <strong>{{ relatorio_kpis.total_caixas }}</strong>
+    </div>
+    <div class="executive-metric-card">
+      <span>Solicitacoes</span>
+      <strong>{{ relatorio_kpis.solicitacoes_abertas }}</strong>
+    </div>
+    <div class="executive-metric-card">
+      <span>Alertas</span>
+      <strong>{{ relatorio_kpis.alertas_peca }}</strong>
+    </div>
+  </div>
+</section>
+
+<section class="dashboard-action-section mb-4">
+  <div class="section-head">
+    <div><h3>Alertas e atalhos de decisao</h3></div>
+    <a href="/admin/monitoramento" class="btn btn-outline btn-sm">Monitoramento</a>
+  </div>
+  <div class="dashboard-action-grid dashboard-action-grid-compact">
+    {% for alerta in alertas_relatorio %}
+    <a href="{{ alerta.href }}" class="dashboard-action-card {{ alerta.tom }}">
+      <div class="dashboard-action-emoji">{% if alerta.tom == 'red' %}&#9888;{% elif alerta.tom == 'amber' %}&#128993;{% else %}&#9989;{% endif %}</div>
+      <div class="dashboard-action-title">{{ alerta.valor }}</div>
+      <div class="dashboard-action-mini">{{ alerta.titulo }}</div>
+      <div class="dashboard-action-buttons"><span class="btn btn-ghost-light btn-sm">{{ alerta.detalhe }}</span></div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="executive-band mb-4">
+  <div class="executive-band-item">
+    <span>Mov.</span>
+    <strong>{{ relatorio_kpis.movimentacoes }}</strong>
+  </div>
+  <div class="executive-band-item">
+    <span>Campo</span>
+    <strong>{{ relatorio_kpis.caixas_em_campo }}</strong>
+  </div>
+  <div class="executive-band-item">
+    <span>Baixas</span>
+    <strong>{{ relatorio_kpis.total_baixas }}</strong>
+  </div>
+  <div class="executive-band-item">
+    <span>Receb.</span>
+    <strong>{{ relatorio_kpis.confirmacoes_instalador }}</strong>
+  </div>
+  <div class="executive-band-item">
+    <span>Diverg.</span>
+    <strong>{{ relatorio_kpis.divergencias }}</strong>
+  </div>
+</div>
+
+{% for section in report_sections if section.cards %}
+<section class="executive-section {{ 'mb-4' if not loop.last else '' }}">
+  <div class="section-head">
+    <div><h3>{{ section.title }}</h3></div>
+  </div>
+
+  <div class="report-command-grid {{ 'report-command-grid-compact' if loop.index > 1 else '' }}">
+    {% for card in section.cards %}
+    <article class="report-command-card {{ card.tone }}">
+      <div class="report-command-head">
+        <div class="report-command-icon">{{ card.icon }}</div>
+        <span class="report-command-tag">{{ card.tag }}</span>
+      </div>
+      <div class="report-command-title">{{ card.title }}</div>
+      <div class="report-command-actions">
+        <a href="{{ card.open_href }}" class="btn btn-solid-light btn-sm">Abrir</a>
+        {% if card.download_href %}
+        <a href="{{ card.download_href }}" class="btn btn-ghost-light btn-sm" download>{{ card.download_label }}</a>
+        {% elif card.download_label == "PDF" %}
+        <button onclick="window.print()" class="btn btn-ghost-light btn-sm no-print">PDF</button>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

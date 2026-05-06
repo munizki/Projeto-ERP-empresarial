@@ -1,0 +1,73 @@
+{% extends "shared/base.html" %}
+{% block title %}Baixa Administrativa{% endblock %}
+{% block page_title %}Baixa Administrativa de Hidrometro{% endblock %}
+{% block content %}
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<div class="page-intro mb-4">
+  <div>
+    <h2>Excecao controlada com auditoria obrigatoria</h2>
+    <p>Use este fluxo somente quando o processo operacional normal nao puder ser concluido. A justificativa fica registrada para rastreabilidade.</p>
+  </div>
+  <div class="page-intro-badge">Admin</div>
+</div>
+
+<div class="summary-grid mb-3">
+  <div class="summary-card">
+    <span>Serie</span>
+    <strong class="mono">{{ hidrometro.numero_serie }}</strong>
+    <small>Confirmacao obrigatoria</small>
+  </div>
+  <div class="summary-card">
+    <span>Status atual</span>
+    <strong>{{ humanize_status(hidrometro.status) }}</strong>
+    <small>{{ hidrometro.instalador_atual.nome if hidrometro.instalador_atual else 'Sem instalador vinculado' }}</small>
+  </div>
+  <div class="summary-card">
+    <span>Caixa</span>
+    <strong>{{ hidrometro.caixa.numero_interno if hidrometro.caixa else '-' }}</strong>
+    <small>{{ hidrometro.caixa.serial_number if hidrometro.caixa else '-' }}</small>
+  </div>
+</div>
+
+<div style="max-width: 760px;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Confirmacao em duas etapas</div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="/admin/hidrometros/{{ hidrometro.id }}/override-baixa" data-dirty-check="true">
+        <div class="context-disabled-card mb-3">
+          <strong>Atencao operacional</strong>
+          <span>Esta acao ignora o bloqueio contextual padrao. Use apenas quando houver necessidade real e documentada.</span>
+        </div>
+
+        <div class="form-group">
+          <label>Justificativa obrigatoria</label>
+          <textarea name="justificativa" placeholder="Explique por que o fluxo normal nao pode ser usado." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Observacoes complementares</label>
+          <textarea name="observacoes" placeholder="Ex: OS, protocolo, responsavel de campo, evidencia coletada."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Digite o serial do hidrometro para confirmar</label>
+          <input type="text" name="confirmacao_serial" data-expected="{{ hidrometro.numero_serie }}" class="confirm-match" placeholder="{{ hidrometro.numero_serie }}" required>
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" name="confirmacao_override" value="1" required>
+          <span>Confirmo que revisei o contexto e que a baixa administrativa e realmente necessaria.</span>
+        </label>
+
+        <div class="form-actions mt-3">
+          <button type="submit" class="btn btn-warning" data-confirm="Confirmar a baixa administrativa do hidrometro {{ hidrometro.numero_serie }}?">Executar baixa administrativa</button>
+          <a href="/manipulador/rastrear?numero_serie={{ hidrometro.numero_serie }}" class="btn btn-secondary" data-safe-nav="Existem alteracoes nao salvas nesta excecao administrativa. Deseja sair mesmo assim?">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
